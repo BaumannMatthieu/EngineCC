@@ -86,19 +86,19 @@ struct BoundingBox {
 	glm::vec3 min;
 	glm::vec3 max;
 
-	static std::unique_ptr<BoundingBox> create(const MeshData& mesh, const glm::mat4& m_model_mat) {
-		std::unique_ptr<BoundingBox> box = std::make_unique<BoundingBox>();
-		glm::vec3 world_space_vertice = glm::vec3(m_model_mat * glm::vec4(mesh.data[0].vertice, 1));
-		box->min = world_space_vertice;
-		box->max = world_space_vertice;
-		for (unsigned int i = 1; i < mesh.data.size(); ++i) {
-			glm::vec3 world_space_vertice = glm::vec3(m_model_mat * glm::vec4(mesh.data[i].vertice, 1));
+	static BoundingBox create(const std::unique_ptr<Mesh>& mesh, const glm::mat4& m_model_mat) {
+		BoundingBox box;
+		glm::vec3 world_space_vertice = glm::vec3(m_model_mat * glm::vec4(mesh->m_vertices[0].point, 1));
+		box.min = world_space_vertice;
+		box.max = world_space_vertice;
+		for (unsigned int i = 1; i < mesh->m_vertices.size(); ++i) {
+			glm::vec3 world_space_vertice = glm::vec3(m_model_mat * glm::vec4(mesh->m_vertices[i].point, 1));
 
-			box->max = glm::max(box->max, world_space_vertice);
-			box->min = glm::min(box->min, world_space_vertice);
+			box.max = glm::max(box.max, world_space_vertice);
+			box.min = glm::min(box.min, world_space_vertice);
 		}
 
-		return std::move(box);
+		return box;
 	}
 };
 
@@ -127,66 +127,12 @@ protected:
 	LocalTransform m_transform;
 	// PolygonMode. For bounding boxes
 	GLuint m_polygon_mode;
-	std::vector<std::unique_ptr<BoundingBox>> m_boxes;
+	std::vector<BoundingBox> m_boxes;
 };
-
-
 
 template<typename T>
 class Renderable : public RenderObject
 {
-public:
-	class Mesh {
-	public:
-		Mesh() : m_texture(nullptr) {
-		}
-		~Mesh() {
-		}
-
-		void createVao(const MeshData& mesh) {
-			glGenVertexArrays(1, &m_vao);
-			glBindVertexArray(m_vao);
-
-			GLuint vbo;
-			glGenBuffers(1, &vbo);
-			glBindBuffer(GL_ARRAY_BUFFER, vbo);
-
-			glBufferData(GL_ARRAY_BUFFER, sizeof(MeshData::VertexFormat) * mesh.data.size(), &mesh.data[0], GL_STATIC_DRAW);
-			glEnableVertexAttribArray(0);
-			glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(MeshData::VertexFormat), (void*)0);
-			glEnableVertexAttribArray(1);
-			glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, sizeof(MeshData::VertexFormat), (void*)(offsetof(MeshData::VertexFormat, MeshData::VertexFormat::color)));
-			glEnableVertexAttribArray(2);
-			glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, sizeof(MeshData::VertexFormat), (void*)(offsetof(MeshData::VertexFormat, MeshData::VertexFormat::normal)));
-			glEnableVertexAttribArray(3);
-			glVertexAttribPointer(3, 2, GL_FLOAT, GL_FALSE, sizeof(MeshData::VertexFormat), (void*)(offsetof(MeshData::VertexFormat, MeshData::VertexFormat::texcoords)));
-
-			GLuint ibo;
-			glGenBuffers(1, &ibo);
-			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
-			glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(GLuint) * mesh.indexes.size(), &mesh.indexes[0], GL_STATIC_DRAW);
-		}
-
-		void setTexture(const std::shared_ptr<Texture> texture) {
-			m_texture = texture;
-		}
-
-		void draw(const std::weak_ptr<Shader> shader) const {
-			glBindVertexArray(m_vao);
-			// bind the texture for the mesh
-			if (m_texture)
-				m_texture->bind(shader, "texture");
-
-			int size;
-			glGetBufferParameteriv(GL_ELEMENT_ARRAY_BUFFER, GL_BUFFER_SIZE, &size);
-			glDrawElements(GL_TRIANGLES, size / sizeof(GLuint), GL_UNSIGNED_INT, 0);
-		}
-
-	private:
-		GLuint m_vao;
-		std::shared_ptr<Texture> m_texture;
-	};
-
 public:
 	Renderable(const std::weak_ptr<Shader> shader) : m_shader(shader),
 													 m_model_mat(glm::mat4(1.f)) {
@@ -222,8 +168,8 @@ public:
 			glUniformMatrix4fv(shader_str->getUniformLocation("modelview"), 1, false, glm::value_ptr(viewer.getViewMatrix() * m_model_mat));
 			glUniformMatrix4fv(shader_str->getUniformLocation("projection"), 1, false, glm::value_ptr(Viewer::getProjectionMatrix()));
 
-			for (unsigned int i = 0; i < m_meshes.size(); ++i) {
-				m_meshes[i].draw(shader_str);
+			for (unsigned int i = 0; i < m_render->m_meshes.size(); ++i) {
+				m_render->m_meshes[i]->draw(shader_str);
 			}
 		}
 	}
@@ -234,17 +180,17 @@ public:
 
 		m_boxes.clear();
 		// Recalculate bounding boxes
-		for (std::vector<MeshData>::iterator it = m_render->m_meshes.begin(); it != m_render->m_meshes.end(); ++it) {
-			m_boxes.push_back(std::move(BoundingBox::create(*it, m_model_mat)));
+		for (std::vector<std::unique_ptr<Mesh>>::iterator it = m_render->m_meshes.begin(); it != m_render->m_meshes.end(); ++it) {
+			m_boxes.push_back(BoundingBox::create(*it, m_model_mat));
 		}
 	}
 
 	BoundingBox getGlobalBoundingBox() const {
-		glm::vec3 min = m_boxes[0]->min;
-		glm::vec3 max = m_boxes[0]->max;
+		glm::vec3 min = m_boxes[0].min;
+		glm::vec3 max = m_boxes[0].max;
 		for (unsigned int i = 1; i < m_boxes.size(); ++i) {
-			min = glm::min(min, m_boxes[i]->min);
-			max = glm::max(max, m_boxes[i]->max);
+			min = glm::min(min, m_boxes[i].min);
+			max = glm::max(max, m_boxes[i].max);
 		}
 
 		BoundingBox global_box;
@@ -257,17 +203,12 @@ public:
 private:
 	void init() {
 		for (unsigned int i = 0; i < m_render->m_meshes.size(); ++i) {
-			Mesh mesh;
+			std::unique_ptr<Mesh>& mesh = m_render->m_meshes[i];
 
-			mesh.createVao(m_render->m_meshes[i]);
-			GLuint material_index = m_render->m_meshes[i].material_index;
-			if (!m_render->m_textures.empty() && material_index < m_render->m_textures.size()) {
-				mesh.setTexture(m_render->m_textures[material_index]);
-			}
+			mesh->createVao();
 
-			m_meshes.push_back(mesh);
 			// Create bounding box
-			m_boxes.push_back(std::move(BoundingBox::create(m_render->m_meshes[i], m_model_mat)));
+			m_boxes.push_back(BoundingBox::create(mesh, m_model_mat));
 		}
 	}
 
@@ -278,9 +219,5 @@ private:
 	// Shader of the renderable
 	std::weak_ptr<Shader> m_shader;
 
-	// Mesh 
-	std::vector<Mesh> m_meshes;
-
 	std::unique_ptr<T> m_render;
-
 };

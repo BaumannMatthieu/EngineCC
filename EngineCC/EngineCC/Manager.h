@@ -43,7 +43,6 @@ template<typename K, typename T>
 const T& Manager<K, T>::get(const K& key) const {
 	if (m_ressources.find(key) == m_ressources.end()) {
 		std::cout << "Element " << key << " not found in the map." << std::endl;
-		return nullptr;
 	}
 	return m_ressources.at(key);
 }

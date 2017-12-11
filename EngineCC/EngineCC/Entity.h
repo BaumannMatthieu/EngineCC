@@ -55,12 +55,7 @@ public:
 private:
 	void setBoxLocalTransform(const LocalTransform& objectTransform) {
 		const BoundingBox& box = m_object->getGlobalBoundingBox();
-
-		std::cout << box.min.x << " " << box.max.x << std::endl;
-		std::cout << box.min.y << " " << box.max.y << std::endl;
-		std::cout << box.min.z << " " << box.max.z << std::endl;
-		//exit(1);
-		
+	
 		LocalTransform transform;
 		transform.setScale(box.max - box.min);
 		transform.setTranslation((box.max + box.min)*0.5f);

@@ -18,24 +18,24 @@ public:
 	}
 
 	bool load() {
-		MeshData mesh;
-		mesh.data.push_back(MeshData::VertexFormat(glm::vec3(-0.5, -0.5, 0.5),
+		std::unique_ptr<Mesh> mesh = std::make_unique<Mesh>();
+		mesh->m_vertices.push_back(Mesh::VertexFormat(glm::vec3(-0.5, -0.5, 0.5),
 			glm::vec4(1.0, 0.0, 0.0, 1.0)));
-		mesh.data.push_back(MeshData::VertexFormat(glm::vec3(0.5, -0.5, 0.5),
+		mesh->m_vertices.push_back(Mesh::VertexFormat(glm::vec3(0.5, -0.5, 0.5),
 			glm::vec4(0.0, 1.0, 0.0, 1.0)));
-		mesh.data.push_back(MeshData::VertexFormat(glm::vec3(0.5, 0.5, 0.5),
+		mesh->m_vertices.push_back(Mesh::VertexFormat(glm::vec3(0.5, 0.5, 0.5),
 			glm::vec4(0.0, 0.0, 1.0, 1.0)));
-		mesh.data.push_back(MeshData::VertexFormat(glm::vec3(-0.5, 0.5, 0.5),
+		mesh->m_vertices.push_back(Mesh::VertexFormat(glm::vec3(-0.5, 0.5, 0.5),
 			glm::vec4(1.0, 1.0, 1.0, 1.0)));
 
 		// vertices for the back face of the cube
-		mesh.data.push_back(MeshData::VertexFormat(glm::vec3(-0.5, -0.5, -0.5),
+		mesh->m_vertices.push_back(Mesh::VertexFormat(glm::vec3(-0.5, -0.5, -0.5),
 			glm::vec4(1.0, 0.0, 1.0, 1.0)));
-		mesh.data.push_back(MeshData::VertexFormat(glm::vec3(0.5, -0.5, -0.5),
+		mesh->m_vertices.push_back(Mesh::VertexFormat(glm::vec3(0.5, -0.5, -0.5),
 			glm::vec4(0.0, 1.0, 0.0, 1.0)));
-		mesh.data.push_back(MeshData::VertexFormat(glm::vec3(0.5, 0.5, -0.5),
+		mesh->m_vertices.push_back(Mesh::VertexFormat(glm::vec3(0.5, 0.5, -0.5),
 			glm::vec4(0.0, 0.0, 1.0, 1.0)));
-		mesh.data.push_back(MeshData::VertexFormat(glm::vec3(-0.5, 0.5, -0.5),
+		mesh->m_vertices.push_back(Mesh::VertexFormat(glm::vec3(-0.5, 0.5, -0.5),
 			glm::vec4(1.0, 1.0, 1.0, 1.0)));
 
 		GLuint indexes_arr[] = {
@@ -58,9 +58,9 @@ public:
 			3, 2, 6,
 			6, 7, 3,
 		};
-		mesh.indexes = std::vector<GLuint>(indexes_arr, indexes_arr + 36);
+		mesh->m_indexes = std::vector<GLuint>(indexes_arr, indexes_arr + 36);
 
-		m_meshes.push_back(mesh);
+		m_meshes.push_back(std::move(mesh));
 
 		return true;
 	}
