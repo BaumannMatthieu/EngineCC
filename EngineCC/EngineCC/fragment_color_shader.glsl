@@ -8,5 +8,5 @@ layout(location=0) out vec4 frag_color;
 uniform sampler2D texture;
 
 void main() {
-	frag_color = texture2D(texture, vert_texcoords);
+	frag_color = vert_color;
 }
