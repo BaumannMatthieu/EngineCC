@@ -26,8 +26,12 @@ public:
 		return m_object;
 	}
 
-	const std::unique_ptr<Renderable<Cube>>& getBoxObject() const {
-		return m_box;
+	const std::vector<std::unique_ptr<Renderable<Cube>>>& getBoxesObject() const {
+		return m_boxes;
+	}
+
+	const std::unique_ptr<Renderable<Cube>>& getSelectionBoxObject() const {
+		return m_selection_box;
 	}
 
 	void setLocalTransform(const LocalTransform& transform) {
@@ -53,26 +57,48 @@ public:
 	}
 
 private:
-	void setBoxLocalTransform(const LocalTransform& objectTransform) {
-		const BoundingBox& box = m_object->getGlobalBoundingBox();
-	
+	void setBoxLocalTransform(const LocalTransform& objectTransform) {	
+		const std::vector<BoundingBox>& boxes = m_object->getBoundingBoxes();
+
+		for (unsigned int i = 0; i < m_boxes.size(); ++i) {
+			LocalTransform transform;
+			transform.setScale(boxes[i].max - boxes[i].min);
+			transform.setTranslation((boxes[i].max + boxes[i].min)*0.5f);
+
+			m_boxes[i]->setLocalTransform(transform);
+		}
+
+		// Global selection box
+		const BoundingBox& global_box = m_object->getGlobalBoundingBox();
 		LocalTransform transform;
-		transform.setScale(box.max - box.min);
-		transform.setTranslation((box.max + box.min)*0.5f);
-		m_box->setLocalTransform(transform);
+		transform.setScale(global_box.max - global_box.min);
+		transform.setTranslation((global_box.max + global_box.min)*0.5f);
+
+		m_selection_box->setLocalTransform(transform);
+
 	}
 
 	void defineBoundingBox() {
 		Manager<std::string, std::shared_ptr<Shader>>& shaders = Manager<std::string, std::shared_ptr<Shader>>::getInstance();
+		m_boxes.clear();
+		// Definition of the bounding boxes for each mesh of the model
+		for (unsigned int i = 0; i < m_object->getBoundingBoxes().size(); ++i) {
+			std::unique_ptr<Renderable<Cube>> box = std::make_unique<Renderable<Cube>>(shaders.get("simple"));
+			box->setPolygonMode(GL_LINE);
+			m_boxes.push_back(std::move(box));
+		}
 
-		m_box = std::make_unique<Renderable<Cube>>(shaders.get("simple"));
-		m_box->setPolygonMode(GL_LINE);
+		// Definition of the global selection box
+		m_selection_box = std::make_unique<Renderable<Cube>>(shaders.get("simple"));
+		m_selection_box->setPolygonMode(GL_LINE);
+		
 		// Scale to fit the render object
 		this->setBoxLocalTransform(m_object->getLocalTransform());
 	}
 
 private:
 	std::unique_ptr<RenderObject> m_object;
-	std::unique_ptr<Renderable<Cube>> m_box;
+	std::vector<std::unique_ptr<Renderable<Cube>>> m_boxes;
+	std::unique_ptr<Renderable<Cube>> m_selection_box;
 };
 

@@ -20,12 +20,13 @@ private:
 	Viewer m_viewer;
 	glm::vec4 m_font_color;
 
-	SDL_Window *m_window;
 	SDL_GLContext m_context;
 
 	bool m_run;
 
 public:
+	SDL_Window *m_window;
+
 	static uint16_t width;
 	static uint16_t height;
 };

@@ -18,7 +18,7 @@ public:
 								  m_enable_bb(true) {
 		// Simple shader loading handling vertices and colors
 		std::shared_ptr<Shader> textured_shader = std::make_shared<Shader>("vertex_shader.glsl", "fragment_shader.glsl");
-		std::shared_ptr<Shader> simple_shader = std::make_shared<Shader>("vertex_shader.glsl", "fragment_color_shader.glsl");
+		std::shared_ptr<Shader> simple_shader = std::make_shared<Shader>("vertex_color_shader.glsl", "fragment_color_shader.glsl");
 
 		Manager<std::string, std::shared_ptr<Shader>>& shaders = Manager<std::string, std::shared_ptr<Shader>>::getInstance();
 		shaders.insert("simple", simple_shader);
@@ -32,8 +32,9 @@ public:
 		std::unique_ptr<Renderable<Model>> bob_render = std::make_unique<Renderable<Model>>(shaders.get("texture"), "boblampclean.md5mesh");
 		LocalTransform local_tr2;
 		local_tr2.setScale(glm::vec3(0.1f));
-		local_tr2.setRotation(glm::vec3(1, 0, 0), -3.14f / 2.f);
-		local_tr2.setTranslation(glm::vec3(5, 0, 0));
+		//local_tr2.setRotation(glm::vec3(1, 0, 0), -3.14f / 2.f);
+		//local_tr2.setTranslation(glm::vec3(0, -7, -12));
+
 		bob_render->setLocalTransform(local_tr2);
 
 		std::unique_ptr<Entity> cube = std::make_unique<Entity>(std::move(cube_render));
@@ -47,15 +48,14 @@ public:
 
 	void draw() const {
 		for (unsigned int i = 0; i < m_entities.size(); ++i) {
-			LocalTransform transform = m_entities[i]->getLocalTransform();
-			transform.rotate(glm::vec3(0,1,0), 0.01f);
-			m_entities[i]->setLocalTransform(transform);
-
 			const std::unique_ptr<RenderObject>& renderable = m_entities[i]->getRenderObject();
-			const std::unique_ptr<Renderable<Cube>>& box = m_entities[i]->getBoxObject();
+			const std::vector<std::unique_ptr<Renderable<Cube>>>& boxes = m_entities[i]->getBoxesObject();
+			const std::unique_ptr<Renderable<Cube>>& selection_box = m_entities[i]->getSelectionBoxObject();
 
 			renderable->draw(m_viewer);
-			box->draw(m_viewer);
+			selection_box->draw(m_viewer);
+			for(unsigned int i = 0; i < boxes.size(); ++i) 
+				boxes[i]->draw(m_viewer);
 		}
 	}
 

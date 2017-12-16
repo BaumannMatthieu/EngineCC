@@ -42,6 +42,7 @@ public:
 			GLchar log[1024];
 			glGetShaderInfoLog(shader_object, sizeof(log), NULL, log);
 			fprintf(stderr, "Error compiling shader type %d: '%s'\n", GL_VERTEX_SHADER, log);
+			exit(0);
 		}
 
 		// Attach the shader object to its program
@@ -58,6 +59,7 @@ public:
 			GLchar log[1024];
 			glGetProgramInfoLog(m_program, sizeof(log), NULL, log);
 			fprintf(stderr, "Error linking shader program: '%s'\n", log);
+			exit(0);
 		}
 	}
 

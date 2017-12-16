@@ -123,6 +123,10 @@ public:
 	virtual BoundingBox getGlobalBoundingBox() const = 0;
 	virtual void draw(const Viewer& viewer) const = 0;
 
+	const std::vector<BoundingBox>& getBoundingBoxes() const {
+		return m_boxes;
+	}
+
 protected:
 	LocalTransform m_transform;
 	// PolygonMode. For bounding boxes
@@ -138,11 +142,6 @@ public:
 													 m_model_mat(glm::mat4(1.f)) {
 		// Mesh contains all the data of the renderable (vertex, colors, normals, ...)
 		m_render = std::make_unique<T>();
-		if (!m_render->load()) {
-			std::cout << "Error when initialize primitive" << std::endl;
-			exit(1);
-		}
-
 		this->init();
 	}
 
@@ -150,10 +149,6 @@ public:
 																				  m_model_mat(glm::mat4(1.f)) {
 		// Mesh contains all the data of the renderable (vertex, colors, normals, ...)
 		m_render = std::make_unique<T>(filename);
-		if (!m_render->load()) {
-			std::cout << "Error when loading renderable : " << filename << std::endl;
-			exit(1);
-		}
 		this->init();
 	}
 
@@ -167,11 +162,8 @@ public:
 
 			glUniformMatrix4fv(shader_str->getUniformLocation("modelview"), 1, false, glm::value_ptr(viewer.getViewMatrix() * m_model_mat));
 			glUniformMatrix4fv(shader_str->getUniformLocation("projection"), 1, false, glm::value_ptr(Viewer::getProjectionMatrix()));
-
-			for (unsigned int i = 0; i < m_render->m_meshes.size(); ++i) {
-				m_render->m_meshes[i]->draw(shader_str);
-			}
 		}
+		m_render->draw(m_shader);
 	}
 
 	void setLocalTransform(const LocalTransform& local_tr) {
@@ -198,6 +190,10 @@ public:
 		global_box.max = max;
 
 		return global_box;
+	}
+
+	void setColor(const glm::vec4& color) {
+		m_render->setColor(color);
 	}
 
 private:

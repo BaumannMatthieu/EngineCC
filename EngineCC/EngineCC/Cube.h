@@ -13,11 +13,16 @@
 class Cube : public Primitive {
 public:
 	Cube() {
+		this->load();
 	}
 	~Cube() {
 	}
 
-	bool load() {
+	void draw(const std::weak_ptr<Shader> shader) const {
+		Primitive::draw(shader);
+	}
+private:
+	void load() {
 		std::unique_ptr<Mesh> mesh = std::make_unique<Mesh>();
 		mesh->m_vertices.push_back(Mesh::VertexFormat(glm::vec3(-0.5, -0.5, 0.5),
 			glm::vec4(1.0, 0.0, 0.0, 1.0)));
@@ -61,7 +66,5 @@ public:
 		mesh->m_indexes = std::vector<GLuint>(indexes_arr, indexes_arr + 36);
 
 		m_meshes.push_back(std::move(mesh));
-
-		return true;
 	}
 };
