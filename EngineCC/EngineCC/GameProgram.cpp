@@ -2,201 +2,75 @@
 #include <string>
 #include <set>
 
-#include <SDL_image.h>
-
 #include "Dependencies\glew\glew.h"
 
 #include "GameProgram.h"
-#include "Renderable.h"
-
-// Include Imgui
-#include "imgui.h"
-#include "imgui_impl_sdl_gl3.h"
-
-#include "Cube.h"
-#include "Model.h"
+#include "Entity.h"
+#include "InputHandler.h"
 
 #include "Manager.h"
-
-#include <functional>
 
 uint16_t GameProgram::width = 1366;
 uint16_t GameProgram::height = 1024;
 
-class InputHandler {
+Viewer GameProgram::m_viewer;
+std::unique_ptr<Scene> GameProgram::m_scene = std::make_unique<Scene>(GameProgram::m_viewer);
+std::unique_ptr<Editor> GameProgram::editor = nullptr;
+std::unique_ptr<Game> GameProgram::game = nullptr;
+
+#include <functional>
+
+class FiniteStateMachine {
 public:
-	InputHandler(GameProgram& program, Viewer& viewer, const std::unique_ptr<Scene>& scene) : m_program(program),
-																							  m_viewer(viewer),
-																							  m_scene(scene),
-																							  m_picked_index(-1) {
-		this->defineViewerActions(viewer);
-		this->defineProgramActions(program);
-		m_keydown = false;
-		m_button = 0;
-	}
+	struct Transition;
+	struct State {
+		State(const std::function<void()>& action_f) : m_action_f(action_f) {
+		}
 
-	~InputHandler() {
-	}
+		void run() const {
+			m_action_f();
+		}
 
-	void update(SDL_Event& event) {
-		// Pump new events 
-		// Get new keyboard events
-		//const Uint8 *keystate = SDL_GetKeyboardState(NULL);
-		while (SDL_PollEvent(&event)) {
-			ImGui_ImplSdlGL3_ProcessEvent(&event);
-			switch (event.type) {
-			case SDL_KEYDOWN:
-				m_keydown = true;
-				m_key.insert(event.key.keysym.sym);
-				break;
-			case SDL_KEYUP:
-				m_key.erase(event.key.keysym.sym);
-				if (m_key.empty()) {
-					m_keydown = false;
-				}
-				break;
-			case SDL_MOUSEBUTTONDOWN:
-				m_button = event.button.button;
-				break;
-			case SDL_MOUSEBUTTONUP:
-				m_button = 0;
-				break;
-			default:
+		void addTransition(const Transition& tr) {
+			m_transitions.push_back(tr);
+		}
+
+		const std::vector<Transition>& getAllTransitions() const {
+			return m_transitions;
+		}
+	private:
+		std::function<void()> m_action_f;
+		std::vector<Transition> m_transitions;
+	};
+
+	struct Transition {
+		Transition(const State* next, const std::function<bool()>& func) : m_next(next), m_func(func) {
+		}
+		~Transition() {
+		}
+
+		std::function<bool()> m_func;
+		const State* m_next;
+	};
+
+	void run() {
+		m_current->run();
+
+		for (auto& tr : m_current->getAllTransitions()) {
+			if (tr.m_func()) {
+				m_current = tr.m_next;
 				break;
 			}
 		}
-		
-		ImGui_ImplSdlGL3_NewFrame(m_program.m_window);
-		bool show_test_window = true;
-		bool show_another_window = false;
-		ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
-		{
-			static float f = 0.0f;
-			ImGui::Text("Hello, world!");
-			ImGui::SliderFloat("float", &f, 0.0f, 1.0f);
-			ImGui::ColorEdit3("clear color", (float*)&clear_color);
-			if (ImGui::Button("Test Window")) show_test_window ^= 1;
-			if (ImGui::Button("Another Window")) show_another_window ^= 1;
-			ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
-		}
-
-		Manager< int, std::function<void()> >& inputs = Manager < int, std::function<void()> >::getInstance();
-
-		const std::map<int, std::function<void()>>& ressources = inputs.getRessources();
-		if (m_keydown) {
-			//std::cout << event.key.repeat << std::endl;
-			for (std::map<int, std::function<void()>>::const_iterator it = ressources.begin(); it != ressources.end(); ++it) {
-				// If the action has been retrieved through keystate
-				// we launch its corresponding function
-				int key_code = it->first;
-				if (std::find(m_key.begin(), m_key.end(), key_code) != m_key.end())
-					it->second();
-			}
-		}
-
-		// Update for picking
-		this->pickingUpdate(event);
 	}
 
+	FiniteStateMachine(const State* root) : m_root(root), m_current(m_root) {
+	}
+	~FiniteStateMachine() {
+	}
 private:
-	void pickingUpdate(const SDL_Event& event) {
-		std::vector<std::unique_ptr<Entity>>& entities = m_scene->getEntities();
-		if (m_button == SDL_BUTTON_LEFT) {
-			// Viewport coords
-			m_mouse_X = event.motion.x;
-			m_mouse_Y = event.motion.y;
-
-			// Normalized Device coords
-			glm::vec2 mouse_normalized_device(2.f * m_mouse_X / GameProgram::width - 1, 1.f - 2.f * m_mouse_Y / GameProgram::height);
-			// Homogeneous Clip coords
-			// The view direction points towards the negative z.
-			// w = -z
-			glm::vec4 mouse_ray_clip(mouse_normalized_device.x, mouse_normalized_device.y, -1, 1);
-			// Eye coords
-			glm::vec4 mouse_point_eye = glm::inverse(Viewer::getProjectionMatrix()) * mouse_ray_clip;
-			// Set the w to 0 because we need a ray
-			// mouse_point_eye.z = -1 => the vector is aligned with the forward direction of the viewer
-			glm::vec4 mouse_ray_eye(mouse_point_eye.x, mouse_point_eye.y, mouse_point_eye.z, 0);
-
-			glm::vec4 mouse_ray_model = glm::inverse(m_viewer.getViewMatrix()) * mouse_ray_eye;
-			glm::vec3 t = glm::normalize(glm::vec3(mouse_ray_model.x, mouse_ray_model.y, mouse_ray_model.z));
-
-			glm::vec3 n(0, 1, 0);
-			glm::vec3 originToViewer(m_viewer.getPosition());
-
-			float lambda = -glm::dot(n, originToViewer) / glm::dot(n, t);
-
-			// Compute intersection point
-			glm::vec3 I = m_viewer.getPosition() + lambda * t;
-			if (lambda > 0)
-				std::cout << I.x << " " << I.y << " " << I.z << std::endl;
-
-			if (m_picked_index == -1) {
-				for (unsigned int i = 0; i < entities.size(); ++i) {
-					if (entities[i]->intersect(I)) {
-						m_picked_index = i;
-						const std::unique_ptr<Renderable<Cube>>& selection_box = entities[m_picked_index]->getSelectionBoxObject();
-						selection_box->setColor(glm::vec4(0, 1, 0, 1));
-						break;
-					}
-				}
-			}
-
-			if (m_picked_index != -1) {
-				LocalTransform transform = entities[m_picked_index]->getLocalTransform();
-				transform.setTranslation(I);
-				entities[m_picked_index]->setLocalTransform(transform);
-			}
-		}
-		else {
-			if (m_picked_index != -1) {
-				const std::unique_ptr<Renderable<Cube>>& selection_box = entities[m_picked_index]->getSelectionBoxObject();
-				selection_box->setColor(glm::vec4(0, 0, 0, 1));
-			}
-			m_picked_index = -1;
-		}
-	}
-
-	void defineViewerActions(Viewer& viewer) {
-		Manager< int, std::function<void()> >& inputs = Manager < int, std::function<void()> >::getInstance();
-
-		float speed_viewer = 0.1f;
-		inputs.insert(SDLK_w, [&viewer, speed_viewer]() {
-			viewer.translate(glm::vec3(0, 0, -speed_viewer));
-		});
-		inputs.insert(SDLK_s, [&viewer, speed_viewer]() {
-			viewer.translate(glm::vec3(0, 0, speed_viewer));
-		});
-		inputs.insert(SDLK_a, [&viewer, speed_viewer]() {
-			viewer.translate(glm::vec3(-speed_viewer, 0, 0));
-		});
-		inputs.insert(SDLK_d, [&viewer, speed_viewer]() {
-			viewer.translate(glm::vec3(speed_viewer, 0, 0));
-		});
-	}
-
-	void defineProgramActions(GameProgram& program) {
-		Manager< int, std::function<void()> >& inputs = Manager < int, std::function<void()> >::getInstance();
-
-		inputs.insert(SDLK_ESCAPE, [&program]() {
-			std::cout << "EngineCC closed" << std::endl;
-			program.close();
-		});
-	}
-
-private:
-	const Viewer& m_viewer;
-
-	const std::unique_ptr<Scene>& m_scene;
-	
-	unsigned int m_picked_index;
-
-
-	bool m_keydown;
-	std::set<Uint8> m_key;
-	Uint8 m_button;
-	int m_mouse_X, m_mouse_Y;
-	GameProgram& m_program;
+	const State* m_root;
+	const State* m_current;
 };
 
 void SetSDLFlags() {
@@ -279,19 +153,46 @@ GameProgram::GameProgram() : m_font_color(glm::vec4(0.5, 0.5, 0.8, 1.0)),
 	SDL_GL_SetSwapInterval(1);
 	// Setup ImGui binding
 	ImGui_ImplSdlGL3_Init(m_window);
-	bool show_test_window = true;
-	bool show_another_window = false;
-	ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
 
-
-	m_scene = std::make_unique<Scene>(m_viewer);
-
-	InputHandler inputHandler(*this, m_viewer, m_scene);
-
+	GameProgram::m_scene->init();
 	SDL_Event event;
+
+	InputHandler inputHandler(*this);
+	editor = std::make_unique<Editor>(*this, inputHandler);
+	game = std::make_unique<Game>(*this, inputHandler);
+
+	FiniteStateMachine::State* editorState = new FiniteStateMachine::State(
+	[]() {
+		GameProgram::editor->run();
+	});
+
+	FiniteStateMachine::State* gameState = new FiniteStateMachine::State(
+	[]() {
+		GameProgram::game->run();
+	});
+
+	editorState->addTransition(FiniteStateMachine::Transition(gameState, [&inputHandler, this] {
+		if (inputHandler.m_keydown) {
+			if (inputHandler.m_key.find(SDLK_RETURN) != inputHandler.m_key.end()) {
+				return true;
+			}
+		}
+		return false;
+	}));
+
+	gameState->addTransition(FiniteStateMachine::Transition(editorState, [&inputHandler, this] {
+		if (inputHandler.m_keydown) {
+			if (inputHandler.m_key.find(SDLK_RETURN) != inputHandler.m_key.end()) {
+				return true;
+			}
+		}
+		return false;
+	}));
+
+	std::unique_ptr<FiniteStateMachine> programStateMachine = std::make_unique<FiniteStateMachine>(editorState);
+
+	glEnable(GL_BLEND); glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	while (m_run) {
-		inputHandler.update(event);
-		
 		glViewport(0, 0, (int)ImGui::GetIO().DisplaySize.x, (int)ImGui::GetIO().DisplaySize.y);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		glClearColor(m_font_color.x,
@@ -299,9 +200,15 @@ GameProgram::GameProgram() : m_font_color(glm::vec4(0.5, 0.5, 0.8, 1.0)),
 					 m_font_color.z,
 					 m_font_color.w);
 
+		m_scene->update();
 		m_scene->draw();
-		ImGui::Render();
 
+		ImGui_ImplSdlGL3_NewFrame(m_window);
+		inputHandler.update(event);
+
+		programStateMachine->run();
+		//inputHandler->update(event);
+		ImGui::Render();
 
 		SDL_GL_SwapWindow(m_window);
 	}

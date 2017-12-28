@@ -1,6 +1,8 @@
 #pragma once
 #include "GameProgram.h"
 #include "EntityEditionPanel.h"
+#include "Singleton.h"
+#include <functional>
 #include <set>
 
 class InputHandler {
@@ -9,12 +11,6 @@ public:
 	~InputHandler();
 
 	void update(SDL_Event& event);
-
-private:
-
-	void defineViewerActions(Viewer& viewer);
-
-	void defineProgramActions(GameProgram& program);
 
 public:
 	bool m_keydown;
@@ -29,7 +25,9 @@ public:
 
 private:
 	GameProgram& m_program;
-
-	EntityEditionPanel m_entity_panel;
 };
+
+
+
+
 

@@ -14,16 +14,39 @@ bool Texture::load() {
 
 	SDL_Surface* data = IMG_Load(m_filename.c_str());
 	if (data != NULL) {
-
-		glTexImage2D(GL_TEXTURE_2D,
-			0,
-			GL_RGB,
-			data->w,
-			data->h,
-			0,
-			GL_BGR,
-			GL_UNSIGNED_BYTE,
-			data->pixels);
+		if (m_filename.find(".png") < m_filename.size()) {
+			glTexImage2D(GL_TEXTURE_2D,
+				0,
+				GL_RGBA8,
+				data->w,
+				data->h,
+				0,
+				GL_RGBA,
+				GL_UNSIGNED_BYTE,
+				data->pixels);
+		}
+		else if (m_filename.find(".tga") < m_filename.size()) {
+			glTexImage2D(GL_TEXTURE_2D,
+				0,
+				GL_RGB,
+				data->w,
+				data->h,
+				0,
+				GL_BGR,
+				GL_UNSIGNED_BYTE,
+				data->pixels);
+		}
+		else {
+			glTexImage2D(GL_TEXTURE_2D,
+				0,
+				GL_RGB,
+				data->w,
+				data->h,
+				0,
+				GL_RGB,
+				GL_UNSIGNED_BYTE,
+				data->pixels);
+		}
 
 		SDL_FreeSurface(data);
 		std::cout << "Texture succeded to load at path: " << m_filename.c_str() << std::endl;

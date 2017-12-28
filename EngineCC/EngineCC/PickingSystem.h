@@ -9,7 +9,8 @@ class PickingSystem {
 public:
 	static const std::unique_ptr<Entity>& getPickedEntity();
 	static int getSelectedId();
-	static void update(InputHandler* input);
+	static void update(const InputHandler& input, bool snap_to_grid);
+	static void setSelectedId(int selected_id);
 
 private:
 	PickingSystem();

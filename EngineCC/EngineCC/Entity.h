@@ -11,7 +11,8 @@ class Entity
 public:
 	Entity() {
 	}
-	Entity(std::unique_ptr<RenderObject> object) : m_object(std::move(object)) {
+	Entity(const std::string& name, std::unique_ptr<RenderObject> object) : m_name(name),
+																			m_object(std::move(object)) {
 		this->defineBoundingBox();
 	}
 	~Entity() {
@@ -20,6 +21,10 @@ public:
 	void setRenderObject(std::unique_ptr<RenderObject> object) {
 		m_object = std::move(object);
 		this->defineBoundingBox();
+	}
+
+	const std::string& getName() const {
+		return m_name;
 	}
 
 	const std::unique_ptr<RenderObject>& getRenderObject() const {
@@ -34,6 +39,9 @@ public:
 		return m_selection_box;
 	}
 
+	// Set the transform for the object renderable and its boxes.
+	// This function is always called for animated objects so that
+	// its bounding boxes are always recomputed and fit to the movement
 	void setLocalTransform(const LocalTransform& transform) {
 		m_object->setLocalTransform(transform);
 
@@ -56,6 +64,13 @@ public:
 		return false;
 	}
 
+	void update() {
+		if (m_object->isAnimated()) {
+			const LocalTransform& transform = m_object->getLocalTransform();
+			this->setLocalTransform(transform);
+		}
+	}
+
 private:
 	void setBoxLocalTransform(const LocalTransform& objectTransform) {	
 		const std::vector<BoundingBox>& boxes = m_object->getBoundingBoxes();
@@ -75,7 +90,6 @@ private:
 		transform.setTranslation((global_box.max + global_box.min)*0.5f);
 
 		m_selection_box->setLocalTransform(transform);
-
 	}
 
 	void defineBoundingBox() {
@@ -100,5 +114,7 @@ private:
 	std::unique_ptr<RenderObject> m_object;
 	std::vector<std::unique_ptr<Renderable<Cube>>> m_boxes;
 	std::unique_ptr<Renderable<Cube>> m_selection_box;
+
+	std::string m_name;
 };
 

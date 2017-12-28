@@ -15,19 +15,47 @@
 #include <assimp/postprocess.h>   
 
 #include "Primitive.h"
+#include "Mesh.h"
+#include "BoundingBox.h"
 
 class Model : public Primitive {
 public:
 	Model(const std::string& filename) : m_filename(filename) {
-		Model();
 		this->load();
 	}
 	Model() : m_scene(NULL),
-			  m_animating(false), 
+			  m_animated(false), 
 			  m_start(std::chrono::high_resolution_clock::now()) {
-
 	}
 	~Model() {
+	}
+
+	bool isAnimated() const {
+		return m_animated;
+	}
+
+	inline glm::mat4 aiMatrix4x4ToGlm(const aiMatrix4x4* from)
+	{
+		glm::mat4 to;
+
+		to[0][0] = (GLfloat)from->a1; to[0][1] = (GLfloat)from->b1;  to[0][2] = (GLfloat)from->c1; to[0][3] = (GLfloat)from->d1;
+		to[1][0] = (GLfloat)from->a2; to[1][1] = (GLfloat)from->b2;  to[1][2] = (GLfloat)from->c2; to[1][3] = (GLfloat)from->d2;
+		to[2][0] = (GLfloat)from->a3; to[2][1] = (GLfloat)from->b3;  to[2][2] = (GLfloat)from->c3; to[2][3] = (GLfloat)from->d3;
+		to[3][0] = (GLfloat)from->a4; to[3][1] = (GLfloat)from->b4;  to[3][2] = (GLfloat)from->c4; to[3][3] = (GLfloat)from->d4;
+
+		return to;
+	}
+
+	void computeBoundingBoxes(const glm::mat4& model_mat, std::vector<BoundingBox>& bounding_boxes) {
+		bounding_boxes.clear();
+		if (m_animated) {
+			for (std::map<int, std::vector<Mesh::VertexFormat>>::iterator it = m_bones_vertices.begin(); it != m_bones_vertices.end(); ++it) {
+				bounding_boxes.push_back(BoundingBox::create(it->second, model_mat * aiMatrix4x4ToGlm(&m_transforms[it->first])));
+			}
+		}
+		else {
+			Primitive::computeBoundingBoxes(model_mat, bounding_boxes);
+		}
 	}
 
 	void load() {
@@ -37,6 +65,7 @@ public:
 			this->loadVerticesData();
 			m_globalRootTransform = m_scene->mRootNode->mTransformation.Inverse();
 
+			m_animated = m_scene->HasAnimations();
 			const std::vector<std::shared_ptr<Texture>>& materials = this->loadMaterials();
 
 			// Give to each mesh its texture 
@@ -47,6 +76,8 @@ public:
 				else
 					std::cout << "material index out of range among the vector of textures load" << std::endl;
 			}
+
+			this->writeBuffers();
 		}
 		else {
 			printf("Error parsing '%s': '%s'\n", m_filename.c_str(), m_Importer.GetErrorString());
@@ -58,12 +89,14 @@ public:
 		updateBonesTransforms(m_globalRootTransform,
 							  m_scene->mRootNode,
 							  m_scene->mRootNode->mTransformation);
-		
+
 		if (auto program = shader.lock()) {
 			glUniformMatrix4fv(program->getUniformLocation("bonesTransform"), m_transforms.size(), GL_TRUE, reinterpret_cast<const GLfloat*>(m_transforms.data()));
+			glUniform1i(program->getUniformLocation("animated"), static_cast<int>(m_animated));
 		}
 		Primitive::draw(shader);
 	}
+
 private:
 	const std::vector<std::shared_ptr<Texture>> loadMaterials() {
 		std::vector<std::shared_ptr<Texture>> materials(m_scene->mNumMaterials);
@@ -74,7 +107,8 @@ private:
 			if (pMaterial->GetTextureCount(aiTextureType_DIFFUSE) > 0) {
 				aiString path;  
 				if (pMaterial->GetTexture(aiTextureType_DIFFUSE, 0, &path, NULL, NULL, NULL, NULL, NULL) == AI_SUCCESS) {
-					std::string filename = path.data;
+					std::string filename = "Content/";
+					filename += path.data;
 					std::cout << filename << std::endl;
 					materials[i] = std::make_shared<Texture>(filename);
 
@@ -242,10 +276,21 @@ private:
 				int bone_index = m_bones_map[name.C_Str()];
 
 				for (unsigned int k = 0; k < mesh->mBones[j]->mNumWeights; ++k) {
-					unsigned int vertexID = mesh->mBones[j]->mWeights[k].mVertexId + starting_index;
+					unsigned int vertex_local_id = mesh->mBones[j]->mWeights[k].mVertexId;
+					unsigned int vertex_global_id = vertex_local_id + starting_index;
 					float weight = mesh->mBones[j]->mWeights[k].mWeight;
 					
-					weights[vertexID].insert(std::pair<float, int>(weight, bone_index));
+					weights[vertex_global_id].insert(std::pair<float, int>(weight, bone_index));
+
+					Mesh::VertexFormat& vertex = current_mesh->m_vertices[vertex_local_id];
+					if (m_bones_vertices.find(bone_index) == m_bones_vertices.end()) {
+						std::vector<Mesh::VertexFormat> vertices(1, vertex);
+						m_bones_vertices.insert(std::pair<int, std::vector<Mesh::VertexFormat>>(bone_index, vertices));
+					}
+					else {
+						std::vector<Mesh::VertexFormat>& vertices = m_bones_vertices[bone_index];
+						vertices.push_back(vertex);
+					}
 				}
 			}
 
@@ -292,7 +337,8 @@ private:
 		}
 	}
 private:
-	static Assimp::Importer m_Importer;
+	// Assimp model importer
+	Assimp::Importer m_Importer;
 public:
 	// Name of the model to load
 	std::string m_filename;
@@ -310,5 +356,8 @@ public:
 
 	// When animating a model
 	std::chrono::high_resolution_clock::time_point m_start;
-	bool m_animating;
+	bool m_animated;
+
+	// Information of which vertices can be impacted by a bone
+	std::map<int, std::vector<Mesh::VertexFormat>> m_bones_vertices;
 };

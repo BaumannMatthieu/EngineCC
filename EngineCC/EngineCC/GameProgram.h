@@ -4,6 +4,8 @@
 
 #include "Scene.h"
 #include "Viewer.h"
+#include "Editor.h"
+#include "Game.h"
 
 class GameProgram
 {
@@ -16,15 +18,17 @@ public:
 	void close();
 
 private:
-	std::unique_ptr<Scene> m_scene;
-	Viewer m_viewer;
+
 	glm::vec4 m_font_color;
-
 	SDL_GLContext m_context;
-
 	bool m_run;
 
 public:
+	static std::unique_ptr<Scene> m_scene;
+	static Viewer m_viewer;
+	static std::unique_ptr<Editor> editor;
+	static std::unique_ptr<Game> game;
+
 	SDL_Window *m_window;
 
 	static uint16_t width;

@@ -17,6 +17,12 @@
     <Filter Include="imgui">
       <UniqueIdentifier>{07fa6402-cf01-4d99-908c-221343ac0554}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Utils">
+      <UniqueIdentifier>{1c2402ba-cf2d-4960-bdce-b3cbda17289b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Systems">
+      <UniqueIdentifier>{5c59042a-5709-47c2-ad22-a319e3898ee2}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Renderable.cpp">
@@ -58,6 +64,36 @@
     <ClCompile Include="Model.cpp">
       <Filter>Renderable</Filter>
     </ClCompile>
+    <ClCompile Include="BoundingBox.cpp">
+      <Filter>Renderable</Filter>
+    </ClCompile>
+    <ClCompile Include="Primitive.cpp">
+      <Filter>Renderable</Filter>
+    </ClCompile>
+    <ClCompile Include="Mesh.cpp">
+      <Filter>Renderable</Filter>
+    </ClCompile>
+    <ClCompile Include="InputHandler.cpp">
+      <Filter>Editor</Filter>
+    </ClCompile>
+    <ClCompile Include="EntityEditionPanel.cpp">
+      <Filter>Editor</Filter>
+    </ClCompile>
+    <ClCompile Include="PickingSystem.cpp">
+      <Filter>Editor</Filter>
+    </ClCompile>
+    <ClCompile Include="Singleton.cpp">
+      <Filter>Utils</Filter>
+    </ClCompile>
+    <ClCompile Include="Editor.cpp">
+      <Filter>Editor</Filter>
+    </ClCompile>
+    <ClCompile Include="Game.cpp">
+      <Filter>Editor</Filter>
+    </ClCompile>
+    <ClCompile Include="ProgramState.cpp">
+      <Filter>Editor</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
@@ -71,6 +107,9 @@
       <Filter>Shaders</Filter>
     </None>
     <None Include="vertex_color_shader.glsl">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="fragment_grid.glsl">
       <Filter>Shaders</Filter>
     </None>
   </ItemGroup>
@@ -128,6 +167,36 @@
     </ClInclude>
     <ClInclude Include="imgui_impl_sdl_gl3.h">
       <Filter>imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="BoundingBox.h">
+      <Filter>Renderable</Filter>
+    </ClInclude>
+    <ClInclude Include="LocalTransform.h">
+      <Filter>Renderable</Filter>
+    </ClInclude>
+    <ClInclude Include="Mesh.h">
+      <Filter>Renderable</Filter>
+    </ClInclude>
+    <ClInclude Include="InputHandler.h">
+      <Filter>Editor</Filter>
+    </ClInclude>
+    <ClInclude Include="EntityEditionPanel.h">
+      <Filter>Editor</Filter>
+    </ClInclude>
+    <ClInclude Include="PickingSystem.h">
+      <Filter>Editor</Filter>
+    </ClInclude>
+    <ClInclude Include="Singleton.h">
+      <Filter>Utils</Filter>
+    </ClInclude>
+    <ClInclude Include="Editor.h">
+      <Filter>Editor</Filter>
+    </ClInclude>
+    <ClInclude Include="Game.h">
+      <Filter>Editor</Filter>
+    </ClInclude>
+    <ClInclude Include="ProgramState.h">
+      <Filter>Editor</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

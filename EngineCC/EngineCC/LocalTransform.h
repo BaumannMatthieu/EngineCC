@@ -7,13 +7,15 @@
 struct LocalTransform {
 	LocalTransform() : m_tr_mat(glm::mat4(1.f)),
 		m_rot_mat(glm::mat4(1.f)),
-		m_scale_mat(glm::mat4(1.f)) {
+		m_scale_mat(glm::mat4(1.f)),
+		m_scale_vec(glm::vec3(1.f)){
 	}
 	~LocalTransform() {
 	}
 
 	void setScale(const glm::vec3& vec) {
 		m_scale_mat = glm::scale(glm::mat4(1.f), vec);
+		m_scale_vec = vec;
 	}
 
 	void scale(const glm::vec3& vec) {
@@ -50,6 +52,7 @@ struct LocalTransform {
 
 	void setScale(const glm::mat4& mat) {
 		m_scale_mat = mat;
+		m_scale_vec = glm::vec3(mat[0][0], mat[1][1], mat[2][2]);
 	}
 
 	const glm::mat4& getTranslationMatrix() const {
@@ -64,8 +67,14 @@ struct LocalTransform {
 		return m_rot_mat;
 	}
 
+	const glm::vec3& getScaleVec() const {
+		return m_scale_vec;
+	}
+
 private:
 	glm::mat4 m_rot_mat;
 	glm::mat4 m_scale_mat;
 	glm::mat4 m_tr_mat;
+
+	glm::vec3 m_scale_vec;
 };

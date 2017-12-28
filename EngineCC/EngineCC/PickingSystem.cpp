@@ -17,13 +17,17 @@ int PickingSystem::getSelectedId() {
 	return m_prev_picked;
 }
 
-void PickingSystem::update(InputHandler* input) {
+void PickingSystem::setSelectedId(int selected_id) {
+	m_prev_picked = selected_id;
+}
+
+void PickingSystem::update(const InputHandler& input, bool snap_to_grid) {
 	std::vector<std::unique_ptr<Entity>>& entities = GameProgram::m_scene->getEntities();
 
-	if (input->m_button == SDL_BUTTON_LEFT) {
+	if (input.m_button == SDL_BUTTON_LEFT) {
 		// Normalized Device coords
-		int mouse_X = input->m_mouse_X;
-		glm::vec2 mouse_normalized_device(2.f * mouse_X / GameProgram::width - 1, 1.f - 2.f * input->m_mouse_Y / GameProgram::height);
+		int mouse_X = input.m_mouse_X;
+		glm::vec2 mouse_normalized_device(2.f * mouse_X / GameProgram::width - 1, 1.f - 2.f * input.m_mouse_Y / GameProgram::height);
 		// Homogeneous Clip coords
 		// The view direction points towards the negative z.
 		// w = -z
@@ -44,12 +48,15 @@ void PickingSystem::update(InputHandler* input) {
 
 		// Compute intersection point
 		glm::vec3 I = GameProgram::m_viewer.getPosition() + lambda * t;
-
+		if (snap_to_grid) {
+			I.x = round(I.x);
+			I.z = round(I.z);
+			I.y = round(I.y);
+		}
 		if (!m_picked) {
 			for (unsigned int i = 0; i < entities.size(); ++i) {
 				if (entities[i]->intersect(I)) {
 					m_picked = true;
-
 					// Render the unselected box object as black
 					{
 						const std::unique_ptr<Renderable<Cube>>& selection_box = entities[m_prev_picked]->getSelectionBoxObject();
