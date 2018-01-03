@@ -14,7 +14,7 @@
 class Cube : public Primitive {
 public:
 	Cube() {
-		this->load();
+		load();
 	}
 	~Cube() {
 	}
@@ -76,7 +76,7 @@ private:
 class Plane : public Primitive {
 public:
 	Plane() {
-		this->load();
+		load();
 	}
 	~Plane() {
 	}
@@ -107,6 +107,34 @@ private:
 
 		m_meshes.push_back(std::move(mesh));
 
+		this->writeBuffers();
+	}
+};
+
+class LinePrimitive : public Primitive {
+public:
+	LinePrimitive(const std::vector<glm::vec3>& points, const std::vector<glm::vec4>& colors) {
+		load(points, colors);
+	}
+	~LinePrimitive() {
+	}
+
+	void draw(const std::weak_ptr<Shader> shader) const {
+		Primitive::draw(shader);
+	}
+
+private:
+	void load(const std::vector<glm::vec3>& points, const std::vector<glm::vec4>& colors) {
+		std::unique_ptr<Line> mesh = std::make_unique<Line>();
+		assert(points.size() == colors.size());
+		for(uint32_t i = 0; i < points.size(); i+=2) {
+			mesh->m_vertices.push_back(Mesh::VertexFormat(points[i],
+				colors[i]));
+			mesh->m_vertices.push_back(Mesh::VertexFormat(points[i + 1],
+				colors[i + 1]));
+		}
+
+		m_meshes.push_back(std::move(mesh));
 		this->writeBuffers();
 	}
 };

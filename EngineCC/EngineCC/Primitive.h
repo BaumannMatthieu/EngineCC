@@ -9,7 +9,7 @@
 #include "Shader.h"
 
 struct BoundingBox;
-struct Mesh;
+struct Drawable;
 
 class Primitive {
 public:
@@ -24,12 +24,12 @@ public:
 	virtual void computeBoundingBoxes(const glm::mat4& model_mat, std::vector<BoundingBox>& bounding_boxes);
 
 	virtual bool isAnimated() const;
+	virtual std::vector<glm::vec3> getVertices() const;
 
 protected:
-	virtual void load() = 0;
 	void writeBuffers();
 
 public:
 	// A model is defined by its data vertices
-	std::vector<std::unique_ptr<Mesh>> m_meshes;
+	std::vector<std::unique_ptr<Drawable>> m_meshes;
 };

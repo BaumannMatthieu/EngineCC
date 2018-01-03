@@ -3,6 +3,7 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp> 
+#include <glm/gtx/quaternion.hpp>
 
 struct LocalTransform {
 	LocalTransform() : m_tr_mat(glm::mat4(1.f)),
@@ -24,6 +25,10 @@ struct LocalTransform {
 
 	void setRotation(const glm::vec3& vec, float theta) {
 		m_rot_mat = glm::rotate(glm::mat4(1.f), theta, vec);
+	}
+
+	void setRotation(const glm::quat& q) {
+		m_rot_mat = glm::toMat4(q);
 	}
 
 	void rotate(const glm::vec3& vec, float theta) {

@@ -9,6 +9,15 @@ Primitive::Primitive() {
 Primitive::~Primitive() {
 }
 
+std::vector<glm::vec3> Primitive::getVertices() const {
+	std::vector<glm::vec3> vertices;
+	for (int i = 0; i < m_meshes.size(); ++i) {
+		const std::vector<glm::vec3>& vertices_current_mesh = m_meshes[i]->getVertices();
+		vertices.insert(vertices.end(), vertices_current_mesh.begin(), vertices_current_mesh.end());
+	}
+	return vertices;
+}
+
 void Primitive::draw(const std::weak_ptr<Shader> shader) const {
 	for (unsigned int i = 0; i < m_meshes.size(); ++i) {
 		m_meshes[i]->draw(shader);

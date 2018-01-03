@@ -11,17 +11,17 @@
     <Filter Include="Renderable">
       <UniqueIdentifier>{8b45d8df-a2f2-4181-95c4-ae33f9b0a7ef}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Editor">
-      <UniqueIdentifier>{97b6b451-2e8b-40e7-aafc-d33fa3db6741}</UniqueIdentifier>
-    </Filter>
     <Filter Include="imgui">
       <UniqueIdentifier>{07fa6402-cf01-4d99-908c-221343ac0554}</UniqueIdentifier>
     </Filter>
     <Filter Include="Utils">
       <UniqueIdentifier>{1c2402ba-cf2d-4960-bdce-b3cbda17289b}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Systems">
-      <UniqueIdentifier>{5c59042a-5709-47c2-ad22-a319e3898ee2}</UniqueIdentifier>
+    <Filter Include="Game">
+      <UniqueIdentifier>{97b6b451-2e8b-40e7-aafc-d33fa3db6741}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Game\Systems">
+      <UniqueIdentifier>{a6698b40-74e8-4c56-a256-525e3a6d6f4c}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -35,16 +35,16 @@
       <Filter>Renderable</Filter>
     </ClCompile>
     <ClCompile Include="GameProgram.cpp">
-      <Filter>Editor</Filter>
+      <Filter>Game</Filter>
     </ClCompile>
     <ClCompile Include="main.cpp">
-      <Filter>Editor</Filter>
+      <Filter>Game</Filter>
     </ClCompile>
     <ClCompile Include="Viewer.cpp">
-      <Filter>Editor</Filter>
+      <Filter>Game</Filter>
     </ClCompile>
     <ClCompile Include="Scene.cpp">
-      <Filter>Editor</Filter>
+      <Filter>Game</Filter>
     </ClCompile>
     <ClCompile Include="Entity.cpp">
       <Filter>Renderable</Filter>
@@ -74,25 +74,25 @@
       <Filter>Renderable</Filter>
     </ClCompile>
     <ClCompile Include="InputHandler.cpp">
-      <Filter>Editor</Filter>
+      <Filter>Game</Filter>
     </ClCompile>
     <ClCompile Include="EntityEditionPanel.cpp">
-      <Filter>Editor</Filter>
+      <Filter>Game</Filter>
     </ClCompile>
     <ClCompile Include="PickingSystem.cpp">
-      <Filter>Editor</Filter>
+      <Filter>Game</Filter>
     </ClCompile>
     <ClCompile Include="Singleton.cpp">
       <Filter>Utils</Filter>
     </ClCompile>
     <ClCompile Include="Editor.cpp">
-      <Filter>Editor</Filter>
+      <Filter>Game</Filter>
     </ClCompile>
     <ClCompile Include="Game.cpp">
-      <Filter>Editor</Filter>
+      <Filter>Game</Filter>
     </ClCompile>
     <ClCompile Include="ProgramState.cpp">
-      <Filter>Editor</Filter>
+      <Filter>Game</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -112,6 +112,9 @@
     <None Include="fragment_grid.glsl">
       <Filter>Shaders</Filter>
     </None>
+    <None Include="vertex_debug_bullet_shader.glsl">
+      <Filter>Shaders</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Renderable.h">
@@ -124,10 +127,10 @@
       <Filter>Renderable</Filter>
     </ClInclude>
     <ClInclude Include="GameProgram.h">
-      <Filter>Editor</Filter>
+      <Filter>Game</Filter>
     </ClInclude>
     <ClInclude Include="Viewer.h">
-      <Filter>Editor</Filter>
+      <Filter>Game</Filter>
     </ClInclude>
     <ClInclude Include="Primitive.h">
       <Filter>Renderable</Filter>
@@ -139,10 +142,10 @@
       <Filter>Renderable</Filter>
     </ClInclude>
     <ClInclude Include="Scene.h">
-      <Filter>Editor</Filter>
+      <Filter>Game</Filter>
     </ClInclude>
     <ClInclude Include="Manager.h">
-      <Filter>Editor</Filter>
+      <Filter>Game</Filter>
     </ClInclude>
     <ClInclude Include="Entity.h">
       <Filter>Renderable</Filter>
@@ -178,25 +181,37 @@
       <Filter>Renderable</Filter>
     </ClInclude>
     <ClInclude Include="InputHandler.h">
-      <Filter>Editor</Filter>
+      <Filter>Game</Filter>
     </ClInclude>
     <ClInclude Include="EntityEditionPanel.h">
-      <Filter>Editor</Filter>
+      <Filter>Game</Filter>
     </ClInclude>
     <ClInclude Include="PickingSystem.h">
-      <Filter>Editor</Filter>
+      <Filter>Game</Filter>
     </ClInclude>
     <ClInclude Include="Singleton.h">
       <Filter>Utils</Filter>
     </ClInclude>
     <ClInclude Include="Editor.h">
-      <Filter>Editor</Filter>
+      <Filter>Game</Filter>
     </ClInclude>
     <ClInclude Include="Game.h">
-      <Filter>Editor</Filter>
+      <Filter>Game</Filter>
     </ClInclude>
     <ClInclude Include="ProgramState.h">
-      <Filter>Editor</Filter>
+      <Filter>Game</Filter>
+    </ClInclude>
+    <ClInclude Include="Components.h">
+      <Filter>Game</Filter>
+    </ClInclude>
+    <ClInclude Include="RenderSystem.h">
+      <Filter>Game\Systems</Filter>
+    </ClInclude>
+    <ClInclude Include="PhysicSystem.h">
+      <Filter>Game\Systems</Filter>
+    </ClInclude>
+    <ClInclude Include="World.h">
+      <Filter>Game</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

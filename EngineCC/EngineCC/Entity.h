@@ -110,10 +110,12 @@ private:
 		this->setBoxLocalTransform(m_object->getLocalTransform());
 	}
 
+
 private:
 	std::unique_ptr<RenderObject> m_object;
 	std::vector<std::unique_ptr<Renderable<Cube>>> m_boxes;
 	std::unique_ptr<Renderable<Cube>> m_selection_box;
+
 
 	std::string m_name;
 };

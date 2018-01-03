@@ -2,16 +2,20 @@
 
 #include <SDL.h>
 
-#include "Scene.h"
 #include "Viewer.h"
+
 #include "Editor.h"
 #include "Game.h"
+
+#include "World.h"
 
 class GameProgram
 {
 public:
 	GameProgram();
 	~GameProgram();
+
+	void initShaders() const;
 
 	void setFullscreen(bool active = true);
 	void setFontColor(const glm::vec4& color);
@@ -24,10 +28,9 @@ private:
 	bool m_run;
 
 public:
-	static std::unique_ptr<Scene> m_scene;
-	static Viewer m_viewer;
 	static std::unique_ptr<Editor> editor;
 	static std::unique_ptr<Game> game;
+	static Viewer* m_current_viewer;
 
 	SDL_Window *m_window;
 

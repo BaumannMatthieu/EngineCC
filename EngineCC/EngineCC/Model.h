@@ -34,23 +34,39 @@ public:
 		return m_animated;
 	}
 
-	inline glm::mat4 aiMatrix4x4ToGlm(const aiMatrix4x4* from)
+	inline glm::mat4 aiMatrix4x4ToGlm(const aiMatrix4x4& from) const
 	{
 		glm::mat4 to;
 
-		to[0][0] = (GLfloat)from->a1; to[0][1] = (GLfloat)from->b1;  to[0][2] = (GLfloat)from->c1; to[0][3] = (GLfloat)from->d1;
-		to[1][0] = (GLfloat)from->a2; to[1][1] = (GLfloat)from->b2;  to[1][2] = (GLfloat)from->c2; to[1][3] = (GLfloat)from->d2;
-		to[2][0] = (GLfloat)from->a3; to[2][1] = (GLfloat)from->b3;  to[2][2] = (GLfloat)from->c3; to[2][3] = (GLfloat)from->d3;
-		to[3][0] = (GLfloat)from->a4; to[3][1] = (GLfloat)from->b4;  to[3][2] = (GLfloat)from->c4; to[3][3] = (GLfloat)from->d4;
+		to[0][0] = (GLfloat)from.a1; to[0][1] = (GLfloat)from.b1;  to[0][2] = (GLfloat)from.c1; to[0][3] = (GLfloat)from.d1;
+		to[1][0] = (GLfloat)from.a2; to[1][1] = (GLfloat)from.b2;  to[1][2] = (GLfloat)from.c2; to[1][3] = (GLfloat)from.d2;
+		to[2][0] = (GLfloat)from.a3; to[2][1] = (GLfloat)from.b3;  to[2][2] = (GLfloat)from.c3; to[2][3] = (GLfloat)from.d3;
+		to[3][0] = (GLfloat)from.a4; to[3][1] = (GLfloat)from.b4;  to[3][2] = (GLfloat)from.c4; to[3][3] = (GLfloat)from.d4;
 
 		return to;
+	}
+
+	virtual std::vector<glm::vec3> getVertices() const {
+		std::vector<glm::vec3> vertices;
+		//glm::mat4& glm_globalRootTransform = aiMatrix4x4ToGlm(m_scene->mRootNode->mTransformation);
+		glm::mat4& glm_globalRootTransform = aiMatrix4x4ToGlm(m_scene->mRootNode->mTransformation.Inverse());
+		for (int i = 0; i < m_meshes.size(); ++i) {
+			std::vector<glm::vec3>& vertices_current_mesh = m_meshes[i]->getVertices();
+			// A loaded model contains a m_globalRootTransform that must be applied to the vertices before computing the convex hull collision shape
+			for (int j = 0; j < vertices_current_mesh.size(); ++j) {
+				vertices_current_mesh[j] = glm::vec3(glm_globalRootTransform * glm::vec4(vertices_current_mesh[j], 1.f));
+			}
+
+			vertices.insert(vertices.end(), vertices_current_mesh.begin(), vertices_current_mesh.end());
+		}
+		return vertices;
 	}
 
 	void computeBoundingBoxes(const glm::mat4& model_mat, std::vector<BoundingBox>& bounding_boxes) {
 		bounding_boxes.clear();
 		if (m_animated) {
 			for (std::map<int, std::vector<Mesh::VertexFormat>>::iterator it = m_bones_vertices.begin(); it != m_bones_vertices.end(); ++it) {
-				bounding_boxes.push_back(BoundingBox::create(it->second, model_mat * aiMatrix4x4ToGlm(&m_transforms[it->first])));
+				bounding_boxes.push_back(BoundingBox::create(it->second, model_mat * aiMatrix4x4ToGlm(m_transforms[it->first])));
 			}
 		}
 		else {
@@ -63,6 +79,7 @@ public:
 
 		if (m_scene) {
 			this->loadVerticesData();
+			std::cout << "kjkj" << std::endl;
 			m_globalRootTransform = m_scene->mRootNode->mTransformation.Inverse();
 
 			m_animated = m_scene->HasAnimations();
@@ -70,9 +87,10 @@ public:
 
 			// Give to each mesh its texture 
 			for (unsigned int i = 0; i < m_meshes.size(); ++i) {
-				GLuint material_index = m_meshes[i]->m_material_index;
+				Mesh& mesh = dynamic_cast<Mesh&>(*(m_meshes[i]));
+				GLuint material_index = mesh.m_material_index;
 				if (!materials.empty() && material_index < materials.size())
-					m_meshes[i]->m_texture = materials[material_index];
+					mesh.m_texture = materials[material_index];
 				else
 					std::cout << "material index out of range among the vector of textures load" << std::endl;
 			}

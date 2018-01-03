@@ -11,7 +11,7 @@
 
 #include "Texture.h"
 
-struct Mesh {
+struct Drawable {
 	struct VertexFormat {
 		VertexFormat(const glm::vec3& _point,
 			const glm::vec4& _color = glm::vec4(0.f),
@@ -37,19 +37,45 @@ struct Mesh {
 		glm::vec4 weights;
 	};
 
-	Mesh();
-	~Mesh();
+	Drawable();
+	virtual ~Drawable();
 
-	void createVao();
+	virtual void createVao() = 0;
+	virtual void draw(const std::weak_ptr<Shader> shader) const = 0;
 
-	void draw(const std::weak_ptr<Shader> shader) const;
+	virtual std::vector<glm::vec3> getVertices() const = 0;
 
 public:
 	GLuint m_vao;
 	std::vector<VertexFormat> m_vertices;
+
+};
+
+struct Mesh : public Drawable {
+public:
+	Mesh();
+	virtual ~Mesh();
+
+	void createVao();
+	void draw(const std::weak_ptr<Shader> shader) const;
+	std::vector<glm::vec3> getVertices() const;
+
+public:
 	std::vector<GLuint> m_indexes;
 
 	// Two meshes can reference the same texture => shared_ptr
 	GLuint m_material_index;
 	std::shared_ptr<Texture> m_texture;
 };
+
+struct Line : public Drawable {
+public:
+	Line();
+	virtual ~Line();
+
+	void createVao();
+	void draw(const std::weak_ptr<Shader> shader) const;
+	std::vector<glm::vec3> getVertices() const;
+};
+
+

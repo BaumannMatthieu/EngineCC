@@ -74,11 +74,14 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
+      <AdditionalUsingDirectories>%(AdditionalUsingDirectories)</AdditionalUsingDirectories>
+      <AdditionalIncludeDirectories>C:\Users\Matthieu\source\repos\entityx;C:\Users\Matthieu\source\repos\bullet3\src</AdditionalIncludeDirectories>
+      <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
-      <AdditionalDependencies>opengl32.lib;glew32.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>C:\Users\Matthieu\source\repos\EngineCC\EngineCC\EngineCC\Dependencies\glew;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>opengl32.lib;glew32.lib;entityx-d.lib;LinearMath_Debug.lib;BulletCollision_Debug.lib;BulletDynamics_Debug.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>C:\Users\Matthieu\source\repos\EngineCC\EngineCC\EngineCC\Dependencies\glew;C:\Users\Matthieu\source\repos\EngineCC\EngineCC\EngineCC\Dependencies\entityx;C:\Users\Matthieu\source\repos\EngineCC\EngineCC\EngineCC\Dependencies\bullet3;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -145,10 +148,12 @@
     <None Include="fragment_grid.glsl" />
     <None Include="packages.config" />
     <None Include="vertex_color_shader.glsl" />
+    <None Include="vertex_debug_bullet_shader.glsl" />
     <None Include="vertex_shader.glsl" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="BoundingBox.h" />
+    <ClInclude Include="Components.h" />
     <ClInclude Include="Cube.h" />
     <ClInclude Include="Editor.h" />
     <ClInclude Include="Entity.h" />
@@ -164,10 +169,12 @@
     <ClInclude Include="Manager.h" />
     <ClInclude Include="Mesh.h" />
     <ClInclude Include="Model.h" />
+    <ClInclude Include="PhysicSystem.h" />
     <ClInclude Include="PickingSystem.h" />
     <ClInclude Include="Primitive.h" />
     <ClInclude Include="ProgramState.h" />
     <ClInclude Include="Renderable.h" />
+    <ClInclude Include="RenderSystem.h" />
     <ClInclude Include="Scene.h" />
     <ClInclude Include="Shader.h" />
     <ClInclude Include="Singleton.h" />
@@ -176,6 +183,7 @@
     <ClInclude Include="stb_truetype.h" />
     <ClInclude Include="Texture.h" />
     <ClInclude Include="Viewer.h" />
+    <ClInclude Include="World.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

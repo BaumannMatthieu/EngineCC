@@ -14,25 +14,18 @@
 class Scene
 {
 public:
-	Scene(const Viewer& viewer);
-
+	Scene();
 	~Scene();
 
 	void init();
-
 	void update();
-
-	void draw() const;
-
+	void draw(const Viewer& viewer) const;
 	void addEntity(std::unique_ptr<Entity> entity);
 
 	std::vector<std::unique_ptr<Entity>>& getEntities();
-	
 	std::unique_ptr<Entity>& getEntity(const std::string& name);
+
 private:
 	std::vector<std::unique_ptr<Entity>> m_entities;
-	bool m_enable_bb;
-
-	const Viewer& m_viewer;
 };
 

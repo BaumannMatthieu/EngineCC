@@ -22,6 +22,7 @@ public:
 	int m_mouse_Y;
 	// - Button triggered identity
 	Uint8 m_button;
+	int m_wheel;
 
 private:
 	GameProgram& m_program;

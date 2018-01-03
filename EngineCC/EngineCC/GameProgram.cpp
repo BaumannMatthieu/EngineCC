@@ -1,6 +1,7 @@
 #include <iostream>
 #include <string>
 #include <set>
+#include <functional>
 
 #include "Dependencies\glew\glew.h"
 
@@ -10,25 +11,28 @@
 
 #include "Manager.h"
 
+#include <entityx/entityx.h>
+
 uint16_t GameProgram::width = 1366;
 uint16_t GameProgram::height = 1024;
 
-Viewer GameProgram::m_viewer;
-std::unique_ptr<Scene> GameProgram::m_scene = std::make_unique<Scene>(GameProgram::m_viewer);
 std::unique_ptr<Editor> GameProgram::editor = nullptr;
 std::unique_ptr<Game> GameProgram::game = nullptr;
-
-#include <functional>
+Viewer* GameProgram::m_current_viewer = nullptr;
 
 class FiniteStateMachine {
 public:
 	struct Transition;
 	struct State {
-		State(const std::function<void()>& action_f) : m_action_f(action_f) {
+		State(const std::function<void()>& action_f, const std::function<void()>& configure_f = []() {}) : m_action_f(action_f), m_configure_f(configure_f) {
 		}
 
 		void run() const {
 			m_action_f();
+		}
+
+		void configure() const {
+			m_configure_f();
 		}
 
 		void addTransition(const Transition& tr) {
@@ -40,6 +44,7 @@ public:
 		}
 	private:
 		std::function<void()> m_action_f;
+		std::function<void()> m_configure_f;
 		std::vector<Transition> m_transitions;
 	};
 
@@ -59,6 +64,7 @@ public:
 		for (auto& tr : m_current->getAllTransitions()) {
 			if (tr.m_func()) {
 				m_current = tr.m_next;
+				m_current->configure();
 				break;
 			}
 		}
@@ -154,9 +160,10 @@ GameProgram::GameProgram() : m_font_color(glm::vec4(0.5, 0.5, 0.8, 1.0)),
 	// Setup ImGui binding
 	ImGui_ImplSdlGL3_Init(m_window);
 
-	GameProgram::m_scene->init();
-	SDL_Event event;
+	// Definition of the shaders
+	initShaders();
 
+	SDL_Event event;
 	InputHandler inputHandler(*this);
 	editor = std::make_unique<Editor>(*this, inputHandler);
 	game = std::make_unique<Game>(*this, inputHandler);
@@ -164,11 +171,19 @@ GameProgram::GameProgram() : m_font_color(glm::vec4(0.5, 0.5, 0.8, 1.0)),
 	FiniteStateMachine::State* editorState = new FiniteStateMachine::State(
 	[]() {
 		GameProgram::editor->run();
+	},
+	[]() {
+		GameProgram::game->clear();
+		GameProgram::editor->reset();
 	});
 
 	FiniteStateMachine::State* gameState = new FiniteStateMachine::State(
 	[]() {
 		GameProgram::game->run();
+	},
+		// When the game is launched, we init it by copying all entities from the editor to the game
+	[]() {
+		GameProgram::game->init(GameProgram::editor->entities);
 	});
 
 	editorState->addTransition(FiniteStateMachine::Transition(gameState, [&inputHandler, this] {
@@ -189,7 +204,7 @@ GameProgram::GameProgram() : m_font_color(glm::vec4(0.5, 0.5, 0.8, 1.0)),
 		return false;
 	}));
 
-	std::unique_ptr<FiniteStateMachine> programStateMachine = std::make_unique<FiniteStateMachine>(editorState);
+	std::unique_ptr<FiniteStateMachine> programStateMachine = std::make_unique<FiniteStateMachine>(gameState);
 
 	glEnable(GL_BLEND); glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	while (m_run) {
@@ -200,18 +215,31 @@ GameProgram::GameProgram() : m_font_color(glm::vec4(0.5, 0.5, 0.8, 1.0)),
 					 m_font_color.z,
 					 m_font_color.w);
 
-		m_scene->update();
-		m_scene->draw();
-
 		ImGui_ImplSdlGL3_NewFrame(m_window);
 		inputHandler.update(event);
 
 		programStateMachine->run();
-		//inputHandler->update(event);
+
 		ImGui::Render();
 
 		SDL_GL_SwapWindow(m_window);
 	}
+}
+
+void GameProgram::initShaders() const {
+	// Simple shader loading handling vertices and colors
+	std::shared_ptr<Shader> textured_shader = std::make_shared<Shader>("vertex_shader.glsl", "fragment_shader.glsl");
+	std::shared_ptr<Shader> simple_shader = std::make_shared<Shader>("vertex_color_shader.glsl", "fragment_color_shader.glsl");
+	std::shared_ptr<Shader> grid_shader = std::make_shared<Shader>("vertex_color_shader.glsl", "fragment_grid.glsl");
+	// Add a new shader for drawing the lines of the bullet debug drawer
+	std::shared_ptr<Shader> debug_bullet_shader = std::make_shared<Shader>("vertex_debug_bullet_shader.glsl", "fragment_color_shader.glsl");
+
+	Manager<std::string, std::shared_ptr<Shader>>& shaders = Manager<std::string, std::shared_ptr<Shader>>::getInstance();
+
+	shaders.insert("simple", simple_shader);
+	shaders.insert("grid", grid_shader);
+	shaders.insert("texture", textured_shader);
+	shaders.insert("debug_bullet", debug_bullet_shader);
 }
 
 GameProgram::~GameProgram()

@@ -18,6 +18,10 @@ const glm::mat4& Viewer::getViewMatrix() const {
 	return m_view_mat;
 }
 
+const glm::vec3& Viewer::getDirection() const {
+	return m_direction;
+}
+
 const glm::vec3& Viewer::getPosition() const {
 	return m_position;
 }

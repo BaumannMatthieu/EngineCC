@@ -16,6 +16,7 @@
 
 #include "BoundingBox.h"
 #include "LocalTransform.h"
+#include "Primitive.h"
 
 class RenderObject {
 public:
@@ -30,6 +31,7 @@ public:
 	virtual BoundingBox getGlobalBoundingBox() const = 0;
 	virtual void draw(const Viewer& viewer) const = 0;
 	virtual bool isAnimated() const = 0;
+	virtual const Primitive& getPrimitive() const = 0;
 
 	const std::vector<BoundingBox>& getBoundingBoxes() const {
 		return m_boxes;
@@ -47,6 +49,7 @@ class Renderable : public RenderObject
 {
 public:
 
+	// Renderable constructor for a "well-defined" primitive object such as Cubes, Planes, Spheres...
 	Renderable(const std::weak_ptr<Shader> shader) : m_shader(shader),
 													 m_model_mat(glm::mat4(1.f)) {
 		// Mesh contains all the data of the renderable (vertex, colors, normals, ...)
@@ -54,6 +57,16 @@ public:
 		init();
 	}
 
+	// Renderable constructor for a non "well-defined" primitive object such as a line.
+	// In the case of lines we ask for the 2 points and ModelMatrix is equal to Identity.
+	Renderable(const std::weak_ptr<Shader> shader, const std::vector<glm::vec3>& points, const std::vector<glm::vec4>& colors) : m_shader(shader),
+																																m_model_mat(glm::mat4(1.f)) {
+		// Mesh contains all the data of the renderable (vertex, colors, normals, ...)
+		m_render = std::make_unique<T>(points, colors);
+		init();
+	}
+
+	// Renderable construction for a model 3D object a.k.a. Renderable<Model>
 	Renderable(const std::weak_ptr<Shader> shader, const std::string& filename) : m_shader(shader),
 																				  m_model_mat(glm::mat4(1.f)) {
 		// Mesh contains all the data of the renderable (vertex, colors, normals, ...)
@@ -88,6 +101,7 @@ public:
 			glPolygonMode(GL_FRONT_AND_BACK, m_polygon_mode);
 			shader_str->bind();
 			glUniformMatrix4fv(shader_str->getUniformLocation("model"), 1, false, glm::value_ptr(m_model_mat));
+			glUniformMatrix4fv(shader_str->getUniformLocation("view"), 1, false, glm::value_ptr(viewer.getViewMatrix()));
 			glUniformMatrix4fv(shader_str->getUniformLocation("modelview"), 1, false, glm::value_ptr(viewer.getViewMatrix() * m_model_mat));
 			glUniformMatrix4fv(shader_str->getUniformLocation("projection"), 1, false, glm::value_ptr(Viewer::getProjectionMatrix()));
 		}
@@ -122,6 +136,10 @@ public:
 
 	void setColor(const glm::vec4& color) {
 		m_render->setColor(color);
+	}
+
+	const Primitive& getPrimitive() const {
+		return dynamic_cast<Primitive&>(*m_render);
 	}
 
 private:

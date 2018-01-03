@@ -66,8 +66,9 @@ public:
 	Shader(const std::string& vertex_obj_filename,
 		   const std::string& fragment_obj_filename) {
 		// Create shader program
+		std::cout << "AAA" << std::endl;
 		m_program = glCreateProgram();
-
+		std::cout << "aaa " + vertex_obj_filename << std::endl;
 		attachShader(vertex_obj_filename, GL_VERTEX_SHADER);
 		attachShader(fragment_obj_filename, GL_FRAGMENT_SHADER);
 
