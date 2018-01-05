@@ -133,35 +133,36 @@ public:
 	~EntityCreationPanel() {
 	}
 
-	char* searchFileWindow(bool* open) {
+	char* searchFileWindow(bool* open, bool seeOnlyDirectories = false) {
 		if (!ImGui::Begin("Filesystem Window", open))
 		{
 			ImGui::End();
 			return NULL;
 		}
 		
-		static char path[256] = "C:\\Users\\Matthieu\\source\\repos\\EngineCC\\EngineCC\\EngineCC\\Content\\";
-		static char file[256];
+		//Default path
+		static char current_path[256] = "C:\\Users\\Matthieu\\source\\repos\\EngineCC\\EngineCC\\EngineCC\\Content\\";
+		static char output_file[256];
 
 		int num_col = 3;
-		ImGui::InputText("", path, 256);
+		ImGui::InputText("", current_path, 256);
 
-		std::string path_str = path;
-		std::stringstream test(path_str);
-		std::string segment;
+		std::stringstream stream(current_path);
+		std::string directory_segment;
 		int pos = 0;
 		ImGui::Spacing();
 
 		do {
-			if (!segment.empty()) {
-				pos += segment.size() + 1;
+			if (!directory_segment.empty()) {
+				pos += directory_segment.size() + 1;
 				ImGui::PushID(id);
 				id++;
 				ImGui::PushStyleColor(ImGuiCol_Button, (ImVec4)ImColor::ImColor(0xff888888));
-				if (ImGui::Button(segment.c_str())) {
-					std::string updated_path = path_str;
+				if (ImGui::Button(directory_segment.c_str())) {
+					std::string updated_path(current_path);
 					updated_path.erase(pos, updated_path.size());
-					strcpy_s(path, 256, updated_path.c_str());
+
+					strcpy_s(current_path, 256, updated_path.c_str());
 				}
 				ImGui::PopStyleColor();
 				ImGui::PopID();
@@ -170,7 +171,7 @@ public:
 				ImGui::Text("\\");
 				ImGui::SameLine();
 			}
-		} while (std::getline(test, segment, '\\'));
+		} while (std::getline(stream, directory_segment, '\\'));
 
 		ImGui::Spacing();
 
@@ -180,24 +181,31 @@ public:
 		for (int i = 0; i < num_col; ++i)
 			ImGui::SetColumnWidth(i, 250);
 
-		for (auto &p : fs::directory_iterator(path)) {
-			std::string file_path = p.path().string();
+		std::string file_path;
+		for (auto &p : fs::directory_iterator(current_path)) {
+			file_path = p.path().string();
+			
 			std::string filename = file_path;
-			filename.erase(0, strlen(path));
+			filename.erase(0, strlen(current_path));
+			
 			ImGui::PushID(id);
 			id++;
 			if (fs::is_directory(p.path())) {
 				ImGui::PushStyleColor(ImGuiCol_Button, (ImVec4)ImColor::ImColor(0xff888888));
-				if (ImGui::Button(filename.c_str()))
-				{
-					std::cout << file_path << std::endl;
-					strcpy_s(path, 256, (file_path + "\\").c_str());
+				if (ImGui::Button(filename.c_str())) {
+					strcpy_s(current_path, 256, (file_path + "\\").c_str());
+
+					if (seeOnlyDirectories) {
+						strcpy_s(output_file, 256, file_path.c_str());
+					}
 				}
 				ImGui::PopStyleColor();
 			}
 			else {
-				if (ImGui::Button(filename.c_str())) {
-					m_model_filepath = file_path;
+				if (!seeOnlyDirectories) {
+					if (ImGui::Button(filename.c_str())) {
+						strcpy_s(output_file, 256, file_path.c_str());
+					}
 				}
 			}
 			ImGui::PopID();
@@ -213,9 +221,8 @@ public:
 		}
 
 		ImGui::End();
-
-		strcpy_s(file, 256, m_model_filepath.c_str());
-		return file;
+		
+		return output_file;
 	}
 
 	struct ComponentsData {
@@ -228,7 +235,7 @@ public:
 			PLANE
 		};
 		RenderableType renderable_type;
-		std::string filename;
+		const char* filename;
 
 		// Physics component
 		float mass;
@@ -242,7 +249,8 @@ public:
 		assert(entity.valid());
 		Render render = nullptr;
 		if (data.renderable_type == ComponentsData::MODEL) {
-			render = createRenderComponentModel(data.filename);
+			assert(data.filename != nullptr);
+			render = createRenderComponentModel(std::string(data.filename));
 		}
 		else if (data.renderable_type == ComponentsData::CUBE) {
 			render = createRenderComponent<Cube>();
@@ -315,7 +323,7 @@ public:
 		}
 		else {
 			ComponentsData::RenderableType renderable_type;
-			std::string filename;
+			const char* filename = nullptr;
 			float mass;
 			bool disable_angular_rotation;
 
@@ -334,7 +342,7 @@ public:
 				const char* filename_cstr = render_component->Attribute("filename");
 				assert(filename_cstr != nullptr);
 				renderable_type = ComponentsData::MODEL;
-				filename = std::string(filename_cstr);
+				filename = filename_cstr;
 			}
 			else if(std::strcmp(renderable_type_str, "cube") == 0) {
 				renderable_type = ComponentsData::CUBE;
@@ -374,12 +382,13 @@ public:
 			edition_window.clear();
 		}
 		ImGui::Separator();
-		static char save_filename[256] = "C:\\Users\\Matthieu\\source\\repos\\EngineCC\\EngineCC\\EngineCC\\Scenes\\scene1.xml";
+
+		static char save_filename[256] = "C:\\Users\\Matthieu\\source\\repos\\EngineCC\\EngineCC\\EngineCC\\Scenes\\scene.xml";
+		ImGui::InputText(": save filepath", save_filename, 256);
+
 		ImGui::PushID(id);
 		id++;
-		ImGui::InputText("", save_filename, 256);
-		ImGui::PopID();
-		if (ImGui::Button("Save Scene")) {
+		if (ImGui::Button("Ok") && save_filename) {
 			/// Edition of the XML scene file
 			// A XML file contains the list of entities that are inserted in the scene
 			// Each entity is definied by a unique name referring to a set of specific components and values
@@ -425,13 +434,20 @@ public:
 			XMLError eResult = doc.SaveFile(save_filename);
 			assert(eResult == XML_SUCCESS);
 		}
+		ImGui::PopID();
 		ImGui::Separator();
-		static char load_filename[256] = "C:\\Users\\Matthieu\\source\\repos\\EngineCC\\EngineCC\\EngineCC\\Scenes\\scene1.xml";
+		static char* load_filename = nullptr;
+		static bool load_scene = false;
+		if (ImGui::Button("Load Scene")) {
+			load_scene = true;
+		}
+		
+		if(load_scene)
+			load_filename = fileSelection(false);
+		
 		ImGui::PushID(id);
 		id++;
-		ImGui::InputText("", load_filename, 256);
-		ImGui::PopID();
-		if (ImGui::Button("Load Scene")) {
+		if (ImGui::Button("Ok") && load_filename) {
 			XMLDocument doc;
 			XMLError eResult = doc.LoadFile(load_filename);
 			if (eResult != XML_SUCCESS) {
@@ -478,19 +494,38 @@ public:
 				}
 			}
 		}
+		ImGui::PopID();
 		
 		ImGui::End();
+	}
+
+	char* fileSelection(bool onlyDirectories = false) {
+		static bool open_file_search = false;
+		static char* filepath = nullptr;
+		
+		ImGui::PushID(id);
+		id++;
+		if (ImGui::Button("Open file")) 
+			open_file_search = true;
+		ImGui::PopID();
+
+		if (open_file_search) {
+			filepath = searchFileWindow(&open_file_search, onlyDirectories);
+		}
+
+		if (filepath != nullptr) {
+			ImGui::PushID(id);
+			id++;
+			ImGui::InputText(" : file selected", filepath, static_cast<int>(sizeof(filepath) / sizeof(*filepath)));
+			ImGui::PopID();
+		}
+
+		return filepath;
 	}
 
 	void render(entityx::EntityManager& es) {
 		bool open = true;
 
-		ImVec2 window_pos = ImVec2(10.f, 300.f);
-		ImVec2 window_pos_pivot = ImVec2(0.0f, 0.0f);
-		//ImGui::SetNextWindowPos(window_pos, ImGuiCond_Always, window_pos_pivot);
-		//int size_col = 250;
-
-		//ImGui::SetNextWindowSize(ImVec2(size_col * num_col, 500));
 		if (!ImGui::Begin("Entity Creation Window", &open))
 		{
 			ImGui::End();
@@ -524,9 +559,8 @@ public:
 		}
 
 		// Render component variables
-		static bool check_model = false;
-		static bool check_cube = false;
-		static bool check_plane = false;
+		static const char* filepath;
+		static ComponentsData::RenderableType renderable_type;
 
 		// Physic component variables
 		static float mass = 0.f;
@@ -539,21 +573,18 @@ public:
 
 			if (component_chosen[i] == "Render") {
 				if (ImGui::TreeNode("Render")) {
+					static bool check_model = false;
+					static bool check_cube = false;
+					static bool check_plane = false;
 					ImGui::Checkbox("Model", &check_model);
 					if (check_model) {
 						check_cube = false;
 						check_plane = false;
 
+						renderable_type = ComponentsData::MODEL;
+
 						ImGui::SameLine();
-						static bool open_file_search = false;
-						if (ImGui::Button("Open file"))
-							open_file_search = true;
-						static char* path = NULL;
-						if (open_file_search) {
-							path = searchFileWindow(&open_file_search);
-						}
-						if (path)
-							ImGui::InputText("Path to the model file : ", path, static_cast<int>(sizeof(path) / sizeof(*path)));
+						filepath = fileSelection(false);
 
 						ImGui::Separator();
 					}
@@ -561,11 +592,15 @@ public:
 					if (check_cube) {
 						check_model = false;
 						check_plane = false;
+
+						renderable_type = ComponentsData::CUBE;
 					}
 					ImGui::Checkbox("Plane", &check_plane);
 					if (check_plane) {
 						check_cube = false;
 						check_model = false;
+
+						renderable_type = ComponentsData::PLANE;
 					}
 					ImGui::TreePop();
 				}
@@ -609,22 +644,16 @@ public:
 			components->InsertEndChild(physic_elt);
 
 			pRoot->InsertEndChild(components);
-			ComponentsData::RenderableType renderable_type;
 
-			if (check_model) {
-				renderable_type = ComponentsData::MODEL;
-
+			if (renderable_type == ComponentsData::MODEL) {
 				render_elt->SetAttribute("renderable_type", "model");
-				render_elt->SetAttribute("filename", m_model_filepath.c_str());
+				assert(filepath != NULL);
+				render_elt->SetAttribute("filename", filepath);
 			}
-			else if(check_cube) {
-				renderable_type = ComponentsData::CUBE;
-				
+			else if(renderable_type == ComponentsData::CUBE) {
 				render_elt->SetAttribute("renderable_type", "cube");
 			}
-			else if (check_plane) {
-				renderable_type = ComponentsData::PLANE;			
-				
+			else if (renderable_type == ComponentsData::PLANE) {		
 				render_elt->SetAttribute("renderable_type", "plane");
 			}
 
@@ -639,7 +668,7 @@ public:
 			XMLError eResult = doc.SaveFile(filename.c_str());
 			assert(eResult == XML_SUCCESS);
 
-			ComponentsData data = {name, renderable_type, m_model_filepath, mass, disable_angular_rotation};
+			ComponentsData data = {name, renderable_type, filepath, mass, disable_angular_rotation};
 			EditionWindow::Transform transform = {glm::vec3(0), glm::vec3(1), glm::vec3(0)};
 			creationEntity(es, data, transform);
 		}
