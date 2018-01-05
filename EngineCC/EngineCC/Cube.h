@@ -23,27 +23,38 @@ public:
 		Primitive::draw(shader);
 	}
 
+	void setTexture(const std::string& filepath) {
+		for (int i = 0; i < m_meshes.size(); ++i) {
+			Mesh& mesh = dynamic_cast<Mesh&>(*(m_meshes[i]));
+			
+			std::shared_ptr<Texture> texture = std::make_shared<CubeMapTexture>(filepath);
+			assert(texture->load());
+			mesh.setTexture(texture);
+		}
+	}
+
 private:
 	void load() {
 		std::unique_ptr<Mesh> mesh = std::make_unique<Mesh>();
+		float half = std::sqrt(3.f) / 2;
 		mesh->m_vertices.push_back(Mesh::VertexFormat(glm::vec3(-0.5, -0.5, 0.5),
-			glm::vec4(1.0, 0.0, 0.0, 1.0)));
+			glm::vec4(1.0, 0.0, 0.0, 1.0), glm::vec3(-half, -half, half)));
 		mesh->m_vertices.push_back(Mesh::VertexFormat(glm::vec3(0.5, -0.5, 0.5),
-			glm::vec4(0.0, 1.0, 0.0, 1.0)));
+			glm::vec4(0.0, 1.0, 0.0, 1.0), glm::vec3(half, -half, half)));
 		mesh->m_vertices.push_back(Mesh::VertexFormat(glm::vec3(0.5, 0.5, 0.5),
-			glm::vec4(0.0, 0.0, 1.0, 1.0)));
+			glm::vec4(0.0, 0.0, 1.0, 1.0), glm::vec3(half, half, half)));
 		mesh->m_vertices.push_back(Mesh::VertexFormat(glm::vec3(-0.5, 0.5, 0.5),
-			glm::vec4(1.0, 1.0, 1.0, 1.0)));
+			glm::vec4(1.0, 1.0, 1.0, 1.0), glm::vec3(-half, half, half)));
 
 		// vertices for the back face of the cube
 		mesh->m_vertices.push_back(Mesh::VertexFormat(glm::vec3(-0.5, -0.5, -0.5),
-			glm::vec4(1.0, 0.0, 1.0, 1.0)));
+			glm::vec4(1.0, 0.0, 1.0, 1.0), glm::vec3(-half, -half, -half)));
 		mesh->m_vertices.push_back(Mesh::VertexFormat(glm::vec3(0.5, -0.5, -0.5),
-			glm::vec4(0.0, 1.0, 0.0, 1.0)));
+			glm::vec4(0.0, 1.0, 0.0, 1.0), glm::vec3(half, -half, -half)));
 		mesh->m_vertices.push_back(Mesh::VertexFormat(glm::vec3(0.5, 0.5, -0.5),
-			glm::vec4(0.0, 0.0, 1.0, 1.0)));
+			glm::vec4(0.0, 0.0, 1.0, 1.0), glm::vec3(half, half, -half)));
 		mesh->m_vertices.push_back(Mesh::VertexFormat(glm::vec3(-0.5, 0.5, -0.5),
-			glm::vec4(1.0, 1.0, 1.0, 1.0)));
+			glm::vec4(1.0, 1.0, 1.0, 1.0), glm::vec3(-half, half, -half)));
 
 		GLuint indexes_arr[] = {
 			// front
@@ -85,18 +96,27 @@ public:
 		Primitive::draw(shader);
 	}
 
+	void setTexture(const std::string& filepath) {
+		for (int i = 0; i < m_meshes.size(); ++i) {
+			Mesh& mesh = dynamic_cast<Mesh&>(*(m_meshes[i]));
+
+			std::shared_ptr<Texture> texture = std::make_shared<SimpleTexture>(filepath);
+			assert(texture->load());
+			mesh.setTexture(texture);
+		}
+	}
+
 private:
 	void load() {
 		std::unique_ptr<Mesh> mesh = std::make_unique<Mesh>();
 		mesh->m_vertices.push_back(Mesh::VertexFormat(glm::vec3(-0.5, 0, -0.5),
-			glm::vec4(1.0, 0.0, 0.0, 1.0)));
+			glm::vec4(1.0, 0.0, 0.0, 1.0), glm::vec3(0, 0, 0)));
 		mesh->m_vertices.push_back(Mesh::VertexFormat(glm::vec3(0.5, 0, -0.5),
-			glm::vec4(0.0, 1.0, 0.0, 1.0)));
+			glm::vec4(0.0, 1.0, 0.0, 1.0), glm::vec3(0, 1, 0)));
 		mesh->m_vertices.push_back(Mesh::VertexFormat(glm::vec3(0.5, 0, 0.5),
-			glm::vec4(0.0, 0.0, 1.0, 1.0)));
+			glm::vec4(0.0, 0.0, 1.0, 1.0), glm::vec3(1, 1, 0)));
 		mesh->m_vertices.push_back(Mesh::VertexFormat(glm::vec3(-0.5, 0, 0.5),
-			glm::vec4(1.0, 1.0, 1.0, 1.0)));
-
+			glm::vec4(1.0, 1.0, 1.0, 1.0), glm::vec3(1, 0, 0)));
 
 		GLuint indexes_arr[] = {
 			// front
@@ -121,6 +141,10 @@ public:
 
 	void draw(const std::weak_ptr<Shader> shader) const {
 		Primitive::draw(shader);
+	}
+
+	void setTexture(const std::string& filepath) {
+		return;
 	}
 
 private:

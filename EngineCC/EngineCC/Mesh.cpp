@@ -30,7 +30,7 @@ void Mesh::createVao() {
 	glEnableVertexAttribArray(2);
 	glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, sizeof(Mesh::VertexFormat), (void*)(offsetof(Mesh::VertexFormat, Mesh::VertexFormat::normal)));
 	glEnableVertexAttribArray(3);
-	glVertexAttribPointer(3, 2, GL_FLOAT, GL_FALSE, sizeof(Mesh::VertexFormat), (void*)(offsetof(Mesh::VertexFormat, Mesh::VertexFormat::texcoord)));
+	glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, sizeof(Mesh::VertexFormat), (void*)(offsetof(Mesh::VertexFormat, Mesh::VertexFormat::texcoord)));
 	glEnableVertexAttribArray(4);
 	glVertexAttribIPointer(4, 4, GL_INT, sizeof(Mesh::VertexFormat), (void*)(offsetof(Mesh::VertexFormat, Mesh::VertexFormat::bones_indexes)));
 	glEnableVertexAttribArray(5);
@@ -47,7 +47,7 @@ void Mesh::draw(const std::weak_ptr<Shader> shader) const {
 	glBindVertexArray(m_vao);
 	// bind the texture for the mesh
 	if (m_texture)
-		m_texture->bind(shader, "texture");
+		m_texture->bind(shader, "tex");
 
 	int size;
 	glGetBufferParameteriv(GL_ELEMENT_ARRAY_BUFFER, GL_BUFFER_SIZE, &size);
@@ -61,6 +61,11 @@ std::vector<glm::vec3> Mesh::getVertices() const {
 		vertices.push_back(m_vertices[index].point);
 	}
 	return vertices;
+}
+
+void Mesh::setTexture(std::weak_ptr<Texture> texture){
+	if (auto texture_sp = texture.lock())
+		m_texture = texture_sp;
 }
 
 /// Line function definitions

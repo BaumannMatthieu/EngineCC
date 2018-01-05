@@ -14,11 +14,29 @@ public:
 	Texture(const std::string& filename);
 	~Texture();
 
-	bool load();
-	void bind(const std::weak_ptr<Shader> program, const std::string& location) const;
+	virtual bool load() = 0;
+	virtual void bind(const std::weak_ptr<Shader> program, const std::string& location) const = 0;
 
-private:
+protected:
 	GLuint m_index;
 	std::string m_filename;
+};
+
+class SimpleTexture : public Texture {
+public:
+	SimpleTexture(const std::string& filename);
+	~SimpleTexture();
+
+	bool load();
+	void bind(const std::weak_ptr<Shader> program, const std::string& location) const;
+};
+
+class CubeMapTexture : public Texture {
+public:
+	CubeMapTexture(const std::string& filename);
+	~CubeMapTexture();
+
+	bool load();
+	void bind(const std::weak_ptr<Shader> program, const std::string& location) const;
 };
 

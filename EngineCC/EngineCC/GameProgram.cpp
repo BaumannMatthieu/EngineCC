@@ -229,6 +229,7 @@ GameProgram::GameProgram() : m_font_color(glm::vec4(0.5, 0.5, 0.8, 1.0)),
 void GameProgram::initShaders() const {
 	// Simple shader loading handling vertices and colors
 	std::shared_ptr<Shader> textured_shader = std::make_shared<Shader>("vertex_shader.glsl", "fragment_shader.glsl");
+	std::shared_ptr<Shader> textured_cubemap_shader = std::make_shared<Shader>("vertex_cubemap.glsl", "fragment_cubemap.glsl");
 	std::shared_ptr<Shader> simple_shader = std::make_shared<Shader>("vertex_color_shader.glsl", "fragment_color_shader.glsl");
 	std::shared_ptr<Shader> grid_shader = std::make_shared<Shader>("vertex_color_shader.glsl", "fragment_grid.glsl");
 	// Add a new shader for drawing the lines of the bullet debug drawer
@@ -239,6 +240,7 @@ void GameProgram::initShaders() const {
 	shaders.insert("simple", simple_shader);
 	shaders.insert("grid", grid_shader);
 	shaders.insert("texture", textured_shader);
+	shaders.insert("textured_cubemap", textured_cubemap_shader);
 	shaders.insert("debug_bullet", debug_bullet_shader);
 }
 

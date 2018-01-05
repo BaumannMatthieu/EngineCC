@@ -5,8 +5,9 @@ in vec3 vert_texcoords;
 
 layout(location=0) out vec4 frag_color;
 
-uniform sampler2D tex;
+uniform samplerCube tex;
 
 void main() {
-	frag_color = texture2D(tex, vert_texcoords.xy);
+	frag_color = texture(tex, vert_texcoords.xyz).rgba;
+	//frag_color = vec4(1);
 }

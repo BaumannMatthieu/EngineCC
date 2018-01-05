@@ -118,9 +118,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="BoundingBox.cpp" />
     <ClCompile Include="Editor.cpp" />
-    <ClCompile Include="Entity.cpp" />
     <ClCompile Include="EntityEditionPanel.cpp" />
     <ClCompile Include="Game.cpp" />
     <ClCompile Include="GameProgram.cpp" />
@@ -136,7 +134,6 @@
     <ClCompile Include="Primitive.cpp" />
     <ClCompile Include="ProgramState.cpp" />
     <ClCompile Include="Renderable.cpp" />
-    <ClCompile Include="Scene.cpp" />
     <ClCompile Include="Shader.cpp" />
     <ClCompile Include="Singleton.cpp" />
     <ClCompile Include="Texture.cpp" />
@@ -145,19 +142,19 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="fragment_color_shader.glsl" />
+    <None Include="fragment_cubemap.glsl" />
     <None Include="fragment_shader.glsl" />
     <None Include="fragment_grid.glsl" />
     <None Include="packages.config" />
     <None Include="vertex_color_shader.glsl" />
+    <None Include="vertex_cubemap.glsl" />
     <None Include="vertex_debug_bullet_shader.glsl" />
     <None Include="vertex_shader.glsl" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="BoundingBox.h" />
     <ClInclude Include="Components.h" />
     <ClInclude Include="Cube.h" />
     <ClInclude Include="Editor.h" />
-    <ClInclude Include="Entity.h" />
     <ClInclude Include="EntityEditionPanel.h" />
     <ClInclude Include="Game.h" />
     <ClInclude Include="GameProgram.h" />
@@ -176,7 +173,6 @@
     <ClInclude Include="ProgramState.h" />
     <ClInclude Include="Renderable.h" />
     <ClInclude Include="RenderSystem.h" />
-    <ClInclude Include="Scene.h" />
     <ClInclude Include="Shader.h" />
     <ClInclude Include="Singleton.h" />
     <ClInclude Include="stb_rect_pack.h" />

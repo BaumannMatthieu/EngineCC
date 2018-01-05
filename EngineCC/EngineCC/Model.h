@@ -30,8 +30,8 @@ public:
 	~Model() {
 	}
 
-	bool isAnimated() const {
-		return m_animated;
+	void setTexture(const std::string& filepath) {
+		return;
 	}
 
 	inline glm::mat4 aiMatrix4x4ToGlm(const aiMatrix4x4& from) const
@@ -62,28 +62,15 @@ public:
 		return vertices;
 	}
 
-	void computeBoundingBoxes(const glm::mat4& model_mat, std::vector<BoundingBox>& bounding_boxes) {
-		bounding_boxes.clear();
-		if (m_animated) {
-			for (std::map<int, std::vector<Mesh::VertexFormat>>::iterator it = m_bones_vertices.begin(); it != m_bones_vertices.end(); ++it) {
-				bounding_boxes.push_back(BoundingBox::create(it->second, model_mat * aiMatrix4x4ToGlm(m_transforms[it->first])));
-			}
-		}
-		else {
-			Primitive::computeBoundingBoxes(model_mat, bounding_boxes);
-		}
-	}
-
 	void load() {
 		m_scene = m_Importer.ReadFile(m_filename.c_str(), aiProcess_Triangulate | aiProcess_GenSmoothNormals | aiProcess_FlipUVs);
 
 		if (m_scene) {
-			this->loadVerticesData();
-			std::cout << "kjkj" << std::endl;
+			loadVerticesData();
 			m_globalRootTransform = m_scene->mRootNode->mTransformation.Inverse();
 
 			m_animated = m_scene->HasAnimations();
-			const std::vector<std::shared_ptr<Texture>>& materials = this->loadMaterials();
+			const std::vector<std::shared_ptr<Texture>>& materials = loadMaterials();
 
 			// Give to each mesh its texture 
 			for (unsigned int i = 0; i < m_meshes.size(); ++i) {
@@ -128,12 +115,8 @@ private:
 					std::string filename = "Content/";
 					filename += path.data;
 					std::cout << filename << std::endl;
-					materials[i] = std::make_shared<Texture>(filename);
-
-					if (!materials[i]->load()) {
-						std::cout << "Error loading texture " << filename << std::endl;
-						materials[i] = std::make_shared<Texture>("test.png");
-					}
+					materials[i] = std::make_shared<SimpleTexture>(filename);
+					assert(materials[i]->load());
 				}
 			}
 		}
@@ -283,8 +266,8 @@ private:
 
 				current_mesh->m_vertices.push_back(Mesh::VertexFormat(glm::vec3(vertex->x, vertex->y, vertex->z),
 					glm::vec4(1.f),
-					glm::vec3(normal->x, normal->y, normal->z),
-					glm::vec2(texcoord->x, texcoord->y)));
+					glm::vec3(texcoord->x, texcoord->y, 0),
+					glm::vec3(normal->x, normal->y, normal->z)));
 			}
 
 			weights.resize(weights.size() + num_vertices);

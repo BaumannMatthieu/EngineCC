@@ -36,20 +36,9 @@ void Primitive::setColor(const glm::vec4& color) {
 	this->writeBuffers();
 }
 
-void Primitive::computeBoundingBoxes(const glm::mat4& model_mat, std::vector<BoundingBox>& bounding_boxes) {
-	bounding_boxes.clear();
-	for (unsigned int i = 0; i < m_meshes.size(); ++i) {
-		bounding_boxes.push_back(BoundingBox::create(m_meshes[i]->m_vertices, model_mat));
-	}
-}
-
 void Primitive::writeBuffers() {
 	for (unsigned int i = 0; i < m_meshes.size(); ++i) {
 		m_meshes[i]->createVao();
 	}
-}
-
-bool Primitive::isAnimated() const {
-	return false;
 }
 

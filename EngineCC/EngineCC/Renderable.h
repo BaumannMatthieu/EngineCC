@@ -21,26 +21,20 @@
 class RenderObject {
 public:
 	RenderObject() {
-
 	}
 	virtual ~RenderObject() {
-
 	}
 
 	virtual void setLocalTransform(const LocalTransform& local_tr) = 0;
-	virtual BoundingBox getGlobalBoundingBox() const = 0;
-	virtual void draw(const Viewer& viewer) const = 0;
-	virtual bool isAnimated() const = 0;
-	virtual const Primitive& getPrimitive() const = 0;
-
-	const std::vector<BoundingBox>& getBoundingBoxes() const {
-		return m_boxes;
-	}
 	const LocalTransform& getLocalTransform() const {
 		return m_transform;
 	}
+
+	virtual const Primitive& getPrimitive() const = 0;
+
+	virtual void draw(const Viewer& viewer) const = 0;
+
 protected:
-	std::vector<BoundingBox> m_boxes;
 	LocalTransform m_transform;
 };
 
@@ -77,16 +71,15 @@ public:
 	~Renderable() {
 	}
 
+	void setTexture(const std::string& texture_path) {
+		m_render->setTexture(texture_path);
+	}
+
 private:
 	void init() {
 		m_polygon_mode = GL_FILL;
-		m_boxes = std::vector<BoundingBox>();
-		m_render->computeBoundingBoxes(m_model_mat, m_boxes);
 	}
 public:
-	bool isAnimated() const {
-		return m_render->isAnimated();
-	}
 
 	void setPolygonMode(GLuint polygon_mode) {
 		m_polygon_mode = polygon_mode;
@@ -112,26 +105,6 @@ public:
 	void setLocalTransform(const LocalTransform& local_tr) {
 		m_transform = local_tr;
 		m_model_mat = local_tr.getModelMatrix();
-
-
-		// Recalculate bounding boxes
-		//m_render->computeBoundingBoxes(m_model_mat, m_boxes);
-		m_render->computeBoundingBoxes(m_model_mat, m_boxes);
-	}
-
-	BoundingBox getGlobalBoundingBox() const {
-		glm::vec3 min = m_boxes[0].min;
-		glm::vec3 max = m_boxes[0].max;
-		for (unsigned int i = 1; i < m_boxes.size(); ++i) {
-			min = glm::min(min, m_boxes[i].min);
-			max = glm::max(max, m_boxes[i].max);
-		}
-
-		BoundingBox global_box;
-		global_box.min = min;
-		global_box.max = max;
-
-		return global_box;
 	}
 
 	void setColor(const glm::vec4& color) {

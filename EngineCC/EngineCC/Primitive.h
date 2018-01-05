@@ -21,10 +21,8 @@ public:
 
 	void setColor(const glm::vec4& color);
 
-	virtual void computeBoundingBoxes(const glm::mat4& model_mat, std::vector<BoundingBox>& bounding_boxes);
-
-	virtual bool isAnimated() const;
 	virtual std::vector<glm::vec3> getVertices() const;
+	virtual void setTexture(const std::string& filepath) = 0;
 
 protected:
 	void writeBuffers();

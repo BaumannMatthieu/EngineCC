@@ -236,6 +236,7 @@ public:
 		};
 		RenderableType renderable_type;
 		const char* filename;
+		const char* filepath_tex;
 
 		// Physics component
 		float mass;
@@ -248,15 +249,18 @@ public:
 	void addRenderComponent(const ComponentsData& data, entityx::Entity entity) {
 		assert(entity.valid());
 		Render render = nullptr;
+		Manager<std::string, std::shared_ptr<Shader>>& shaders = Manager<std::string, std::shared_ptr<Shader>>::getInstance();
 		if (data.renderable_type == ComponentsData::MODEL) {
 			assert(data.filename != nullptr);
-			render = createRenderComponentModel(std::string(data.filename));
+			render = createRenderComponentModel(std::string(data.filename), shaders.get("texture"));
 		}
 		else if (data.renderable_type == ComponentsData::CUBE) {
-			render = createRenderComponent<Cube>();
+			assert(data.filepath_tex != nullptr);
+			render = createRenderComponent<Cube>(std::string(data.filepath_tex), shaders.get("textured_cubemap"));
 		}
 		else if (data.renderable_type == ComponentsData::PLANE) {
-			render = createRenderComponent<Plane>();
+			assert(data.filepath_tex != nullptr);
+			render = createRenderComponent<Plane>(std::string(data.filepath_tex), shaders.get("texture"));
 		}
 
 		entity.assign<Render>(render);
@@ -324,6 +328,7 @@ public:
 		else {
 			ComponentsData::RenderableType renderable_type;
 			const char* filename = nullptr;
+			const char* texture_path = nullptr;
 			float mass;
 			bool disable_angular_rotation;
 
@@ -339,10 +344,11 @@ public:
 			assert(renderable_type_str != nullptr);
 
 			if (std::strcmp(renderable_type_str, "model") == 0) {
-				const char* filename_cstr = render_component->Attribute("filename");
-				assert(filename_cstr != nullptr);
+				filename = render_component->Attribute("filename");
+				assert(filename != nullptr);
+				texture_path = render_component->Attribute("texture_path");
+				assert(texture_path != nullptr);
 				renderable_type = ComponentsData::MODEL;
-				filename = filename_cstr;
 			}
 			else if(std::strcmp(renderable_type_str, "cube") == 0) {
 				renderable_type = ComponentsData::CUBE;
@@ -364,7 +370,7 @@ public:
 			angular_rot_elt->QueryBoolText(&disable_angular_rotation);
 
 			/// Create the entity with all the data retrieved
-			ComponentsData data = {name, renderable_type, filename, mass, disable_angular_rotation};
+			ComponentsData data = {name, renderable_type, filename, texture_path, mass, disable_angular_rotation};
 			creationEntity(es, data, tr);
 		}
 	}
@@ -469,7 +475,6 @@ public:
 					assert(name_attribute != nullptr);
 					std::string name = name_attribute;
 
-
 					EditionWindow::Transform transform;
 					XMLElement* rotation = current_entity->FirstChildElement("Rotation");
 					rotation->QueryFloatAttribute("X", &transform.rot.x);
@@ -560,6 +565,7 @@ public:
 
 		// Render component variables
 		static const char* filepath;
+		static const char* texture_path;
 		static ComponentsData::RenderableType renderable_type;
 
 		// Physic component variables
@@ -594,6 +600,9 @@ public:
 						check_plane = false;
 
 						renderable_type = ComponentsData::CUBE;
+
+						ImGui::Text("Texture :");
+						texture_path = fileSelection(false);
 					}
 					ImGui::Checkbox("Plane", &check_plane);
 					if (check_plane) {
@@ -601,6 +610,9 @@ public:
 						check_model = false;
 
 						renderable_type = ComponentsData::PLANE;
+
+						ImGui::Text("Texture :");
+						texture_path = fileSelection(false);
 					}
 					ImGui::TreePop();
 				}
@@ -649,6 +661,7 @@ public:
 				render_elt->SetAttribute("renderable_type", "model");
 				assert(filepath != NULL);
 				render_elt->SetAttribute("filename", filepath);
+				render_elt->SetAttribute("texture_path", filepath);
 			}
 			else if(renderable_type == ComponentsData::CUBE) {
 				render_elt->SetAttribute("renderable_type", "cube");
@@ -668,7 +681,7 @@ public:
 			XMLError eResult = doc.SaveFile(filename.c_str());
 			assert(eResult == XML_SUCCESS);
 
-			ComponentsData data = {name, renderable_type, filepath, mass, disable_angular_rotation};
+			ComponentsData data = {name, renderable_type, filepath, texture_path, mass, disable_angular_rotation};
 			EditionWindow::Transform transform = {glm::vec3(0), glm::vec3(1), glm::vec3(0)};
 			creationEntity(es, data, transform);
 		}
@@ -676,23 +689,20 @@ public:
 		ImGui::End();
 	}
 
-	Render createRenderComponentModel(const std::string& file_path) const {
+	Render createRenderComponentModel(const std::string& file_path, const std::weak_ptr<Shader> shader) const {
 		if (file_path.empty())
 			return nullptr;
 		if (file_path.find(".obj") == std::string::npos && file_path.find(".md5") == std::string::npos)
 			return nullptr;
 
-		Manager<std::string, std::shared_ptr<Shader>>& shaders = Manager<std::string, std::shared_ptr<Shader>>::getInstance();
-
-		std::shared_ptr<Renderable<Model>> render_component = std::make_shared<Renderable<Model>>(shaders.get("texture"), file_path);
+		std::shared_ptr<Renderable<Model>> render_component = std::make_shared<Renderable<Model>>(shader, file_path);
 		return render_component;
 	}
 
 	template<typename T>
-	Render createRenderComponent() const {
-		Manager<std::string, std::shared_ptr<Shader>>& shaders = Manager<std::string, std::shared_ptr<Shader>>::getInstance();
-
-		std::shared_ptr<Renderable<T>> render_component = std::make_shared<Renderable<T>>(shaders.get("simple"));
+	Render createRenderComponent(const std::string& texture_path, const std::weak_ptr<Shader> shader) const {
+		std::shared_ptr<Renderable<T>> render_component = std::make_shared<Renderable<T>>(shader);
+		render_component->setTexture(texture_path);
 		return render_component;
 	}
 

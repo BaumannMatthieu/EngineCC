@@ -3,7 +3,7 @@
 layout(location = 0) in vec3 in_position;
 layout(location = 1) in vec4 in_color;
 layout(location = 2) in vec3 in_normal;
-layout(location = 3) in vec2 in_texcoords;
+layout(location = 3) in vec3 in_texcoords;
 layout(location = 4) in ivec4 in_id;
 layout(location = 5) in vec4 in_weight;
 
@@ -14,7 +14,7 @@ uniform mat4 bonesTransform[32];
 uniform bool animated;
 
 out vec4 vert_color;
-out vec2 vert_texcoords;
+out vec3 vert_texcoords;
 
 void main() {
 	mat4 transform = mat4(1);

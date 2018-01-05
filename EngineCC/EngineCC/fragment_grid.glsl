@@ -1,7 +1,7 @@
 #version 450 core
 
 in vec4 vert_color;
-in vec2 vert_texcoords;
+in vec3 vert_texcoords;
 
 in vec2 frag_coord;
 
@@ -14,6 +14,6 @@ void main() {
 	} else if(abs(size*frag_coord.y - round(size*frag_coord.y)) < size*0.05) {
 		frag_color = vec4(1, 0, 0, 1);
 	} else {
-		frag_color = vec4(1, 0, 1, 0);
+		frag_color = vec4(1, 1, 1, 0);
 	}
 }
