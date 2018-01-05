@@ -15,7 +15,7 @@ class InputHandler;
 
 class Editor : public ProgramState, public entityx::EntityX {
 public:
-	Editor(GameProgram& program, const InputHandler& input_handler);
+	Editor(GameProgram& program, InputHandler& input_handler);
 	virtual ~Editor();
 
 	void run();

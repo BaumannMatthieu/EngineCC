@@ -140,6 +140,7 @@
     <ClCompile Include="Shader.cpp" />
     <ClCompile Include="Singleton.cpp" />
     <ClCompile Include="Texture.cpp" />
+    <ClCompile Include="tinyxml2.cpp" />
     <ClCompile Include="Viewer.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -182,6 +183,7 @@
     <ClInclude Include="stb_textedit.h" />
     <ClInclude Include="stb_truetype.h" />
     <ClInclude Include="Texture.h" />
+    <ClInclude Include="tinyxml2.h" />
     <ClInclude Include="Viewer.h" />
     <ClInclude Include="World.h" />
   </ItemGroup>

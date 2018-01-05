@@ -6,21 +6,21 @@
 HierarchyEntity HierarchyEntity::hierarchy;
 int EntityCreationPanel::id = 0;
 
-EntityEditionPanel::EntityEditionPanel() {
-}
+void EditionWindow::addEntity(const std::string& name, const Transform& tr, entityx::Entity entity) {
+	assert(entity.valid());
+	/// Add into the dynamic world for bullet calculations
+	World& world = Singleton<World>::getInstance();
+	world.addEntity(name, entity);
 
-EntityEditionPanel::~EntityEditionPanel() {
-}
-
-void EntityEditionPanel::addEntity(const std::string& name) {
-	Transform tr = { glm::vec3(0), glm::vec3(1), glm::vec3(0) };
 	m_transforms.insert(std::pair<std::string, Transform>(name, tr));
+
+	updateEntity(name);
 
 	//HierarchyEntity& hierarchy = HierarchyEntity::getHierarchyEntity();
 	//hierarchy.m_root->addEntity();
 }
 
-void EntityEditionPanel::deleteEntity(const std::string& name) {
+void EditionWindow::deleteEntity(const std::string& name) {
 	m_transforms.erase(name);
 
 	World& world = Singleton<World>::getInstance();
@@ -31,7 +31,15 @@ void EntityEditionPanel::deleteEntity(const std::string& name) {
 	m_name_entity_picked.clear();
 }
 
-void EntityEditionPanel::render(const InputHandler& input) {
+void EditionWindow::clear() {
+	m_transforms.clear();
+	m_name_entity_picked.clear();
+
+	World& world = Singleton<World>::getInstance();
+	world.free();
+}
+
+void EditionWindow::render(const InputHandler& input) {
 	// Mouse input handling
 	bool hit = false;
 	btVector3 intersection_point(0, 0, 0);
@@ -85,7 +93,7 @@ void EntityEditionPanel::render(const InputHandler& input) {
 		//HierarchyEntity& hierarchy = HierarchyEntity::getHierarchyEntity();
 		//hierarchy.drawImGUI();
 
-		setTransform(m_name_entity_picked);
+		updateEntity(m_name_entity_picked);
 
 		if (ImGui::Button("Delete")) {
 			//hierarchy.m_root->deleteEntity(selected->getName());
@@ -97,14 +105,14 @@ void EntityEditionPanel::render(const InputHandler& input) {
 	}
 }
 
-void EntityEditionPanel::reset() {
+void EditionWindow::reset() {
 	for (std::map<std::string, Transform>::const_iterator it = m_transforms.cbegin(); it != m_transforms.cend(); it++) {
 		const std::string& name = it->first;
-		setTransform(name);
+		updateEntity(name);
 	}
 }
 
-void EntityEditionPanel::setTransform(const std::string& name) {
+void EditionWindow::updateEntity(const std::string& name) {
 	World& world = Singleton<World>::getInstance();
 	entityx::Entity entity = world.get(name);
 	entityx::ComponentHandle<Physics> physic = entity.component<Physics>();
@@ -129,4 +137,22 @@ void EntityEditionPanel::setTransform(const std::string& name) {
 	LocalTransform render_tr = (*render)->getLocalTransform();
 	render_tr.setScale(tr.scale);
 	(*render)->setLocalTransform(render_tr);
+}
+
+void EditionWindow::setTransform(const std::string& name, const Transform& tr) {
+	m_transforms[name] = tr;
+
+	std::cout << name << std::endl;
+	std::cout << m_transforms[name] << std::endl;
+}
+
+std::ostream& operator<<(std::ostream& stream_out, const EditionWindow::Transform& transform) {
+	stream_out << "Translation : " << std::endl;
+	stream_out << transform.tr.x << " " << transform.tr.y << " " << transform.tr.z << std::endl;
+	stream_out << "Rotation : " << std::endl;
+	stream_out << transform.rot.x << " " << transform.rot.y << " " << transform.rot.z << std::endl;
+	stream_out << "Scale : " << std::endl;
+	stream_out << transform.scale.x << " " << transform.scale.y << " " << transform.scale.z << std::endl;
+
+	return stream_out;
 }

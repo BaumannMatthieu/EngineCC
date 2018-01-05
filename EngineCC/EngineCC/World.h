@@ -41,6 +41,7 @@ public:
 		for (std::map<std::string, entityx::Entity>::iterator it = m_entities.begin(); it != m_entities.end(); it++) {
 			entityx::Entity entity = it->second;
 			removeFromWorld(entity);
+			entity.destroy();
 		}
 		m_entities.clear();
 	}

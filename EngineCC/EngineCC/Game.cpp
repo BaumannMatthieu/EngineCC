@@ -45,7 +45,7 @@ public:
 				m_move_velocity.erase(entity);
 			}
 		});
-		std::cout << std::endl;
+
 	}
 
 	void configure(entityx::EventManager &events) override {
@@ -193,7 +193,7 @@ void Game::clear() {
 	m_game_entity_names.clear();
 }
 
-Game::Game(GameProgram& program, const InputHandler& input_handler) : ProgramState(program, input_handler),
+Game::Game(GameProgram& program, InputHandler& input_handler) : ProgramState(program, input_handler),
 																	  m_theta(0.f),
 																	  m_alpha(0.f),
 																	  m_player_direction(0.f) {

@@ -1,0 +1,10 @@
+<Root>
+    <Name>cube1</Name>
+    <Components>
+        <Render renderable_type="cube"/>
+        <Physics>
+            <mass>3</mass>
+            <angular_rotation_disabled>false</angular_rotation_disabled>
+        </Physics>
+    </Components>
+</Root>

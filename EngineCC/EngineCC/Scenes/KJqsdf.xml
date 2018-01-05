@@ -1,0 +1,10 @@
+<Root>
+    <Name>KJqsdf</Name>
+    <Components>
+        <Render renderable_type="model" filename="C:\Users\Matthieu\source\repos\EngineCC\EngineCC\EngineCC\Content\box.obj"/>
+        <Physics>
+            <mass>3</mass>
+            <angular_rotation_disabled>false</angular_rotation_disabled>
+        </Physics>
+    </Components>
+</Root>

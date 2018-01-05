@@ -7,7 +7,7 @@
 
 #include "RenderSystem.h"
 
-Editor::Editor(GameProgram& program, const InputHandler& input_handler) : ProgramState(program, input_handler),
+Editor::Editor(GameProgram& program, InputHandler& input_handler) : ProgramState(program, input_handler),
 																			m_snap_to_grid(true),
 																			m_draw_grid(true),
 																			m_viewer(glm::vec3(10, 10, 10), glm::vec3(0,0,0)) {
@@ -57,10 +57,11 @@ void Editor::run() {
 		m_viewer.setPosition(m_viewer.getPosition() - m_viewer.getDirection());
 	}
 
-	EntityEditionPanel& entity_panel = Singleton<EntityEditionPanel>::getInstance();
+	EditionWindow& entity_panel = Singleton<EditionWindow>::getInstance();
 	entity_panel.render(m_input_handler);
 	EntityCreationPanel& creation_panel = Singleton<EntityCreationPanel>::getInstance();
 	creation_panel.render(entities);
+	creation_panel.loadSaveSceneWindow(entities);
 
 	if (m_draw_grid) {
 		m_grid->draw(m_viewer);
@@ -70,6 +71,6 @@ void Editor::run() {
 }
 
 void Editor::reset() {
-	EntityEditionPanel& entity_panel = Singleton<EntityEditionPanel>::getInstance();
+	EditionWindow& entity_panel = Singleton<EditionWindow>::getInstance();
 	entity_panel.reset();
 }

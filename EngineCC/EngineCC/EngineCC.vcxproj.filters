@@ -94,6 +94,9 @@
     <ClCompile Include="ProgramState.cpp">
       <Filter>Game</Filter>
     </ClCompile>
+    <ClCompile Include="tinyxml2.cpp">
+      <Filter>Utils</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
@@ -212,6 +215,9 @@
     </ClInclude>
     <ClInclude Include="World.h">
       <Filter>Game</Filter>
+    </ClInclude>
+    <ClInclude Include="tinyxml2.h">
+      <Filter>Utils</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

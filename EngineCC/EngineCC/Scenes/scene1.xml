@@ -1,0 +1,9 @@
+<Root>
+    <ListEntities>
+        <Entity name="cube1">
+            <Rotation X="95" Y="66" Z="22"/>
+            <Translation X="-4" Y="3" Z="3"/>
+            <Scale X="1" Y="5" Z="1"/>
+        </Entity>
+    </ListEntities>
+</Root>

@@ -14,7 +14,9 @@ public:
 
 public:
 	bool m_keydown;
-	std::set<Uint8> m_key;
+	int m_key_repeat;
+	std::set<int> m_key;
+	std::set<int> m_key_repeat_disabled;
 
 	// Mouse event
 	// - Position

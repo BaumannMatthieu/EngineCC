@@ -10,7 +10,7 @@
 class Game : public ProgramState, public entityx::EntityX
 {
 public:
-	Game(GameProgram& program, const InputHandler& input_handler);
+	Game(GameProgram& program, InputHandler& input_handler);
 	virtual ~Game();
 	void run();
 
