@@ -7,6 +7,7 @@ layout(location = 3) in vec3 in_texcoords;
 
 uniform mat4 modelview;
 uniform mat4 projection;
+uniform vec3 tex_factor;
 
 out vec4 vert_color;
 out vec3 vert_texcoords;
@@ -15,5 +16,5 @@ void main() {
 	gl_Position = projection * modelview * vec4(in_position, 1.0f);
 
 	vert_color = in_color;
-	vert_texcoords = in_texcoords;
+	vert_texcoords = in_texcoords * tex_factor;
 }

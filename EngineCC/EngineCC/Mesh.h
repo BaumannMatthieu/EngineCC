@@ -44,6 +44,7 @@ struct Drawable {
 	virtual void draw(const std::weak_ptr<Shader> shader) const = 0;
 
 	virtual std::vector<glm::vec3> getVertices() const = 0;
+	
 
 public:
 	GLuint m_vao;

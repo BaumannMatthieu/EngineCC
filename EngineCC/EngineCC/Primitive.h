@@ -8,7 +8,6 @@
 
 #include "Shader.h"
 
-struct BoundingBox;
 struct Drawable;
 
 class Primitive {
@@ -22,6 +21,8 @@ public:
 	void setColor(const glm::vec4& color);
 
 	virtual std::vector<glm::vec3> getVertices() const;
+
+
 	virtual void setTexture(const std::string& filepath) = 0;
 
 protected:

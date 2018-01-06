@@ -9,6 +9,7 @@ layout(location = 5) in vec4 in_weight;
 
 uniform mat4 modelview;
 uniform mat4 projection;
+uniform vec3 tex_factor;
 
 uniform mat4 bonesTransform[32];
 uniform bool animated;
@@ -27,5 +28,5 @@ void main() {
 	gl_Position = projection * modelview * transform * vec4(in_position, 1.0f);
 
 	vert_color = in_color;
-	vert_texcoords = in_texcoords;
+	vert_texcoords = in_texcoords * tex_factor;
 }

@@ -26,16 +26,13 @@ public:
 	}
 
 	virtual void setLocalTransform(const LocalTransform& local_tr) = 0;
-	const LocalTransform& getLocalTransform() const {
-		return m_transform;
-	}
+	virtual const LocalTransform& getLocalTransform() const = 0;
+
+	virtual void setTexcoordsFactor(const glm::vec3& texcoords_factor) = 0;
 
 	virtual const Primitive& getPrimitive() const = 0;
 
 	virtual void draw(const Viewer& viewer) const = 0;
-
-protected:
-	LocalTransform m_transform;
 };
 
 template<typename T>
@@ -44,8 +41,7 @@ class Renderable : public RenderObject
 public:
 
 	// Renderable constructor for a "well-defined" primitive object such as Cubes, Planes, Spheres...
-	Renderable(const std::weak_ptr<Shader> shader) : m_shader(shader),
-													 m_model_mat(glm::mat4(1.f)) {
+	Renderable(const std::weak_ptr<Shader> shader) : m_shader(shader) {
 		// Mesh contains all the data of the renderable (vertex, colors, normals, ...)
 		m_render = std::make_unique<T>();
 		init();
@@ -53,16 +49,14 @@ public:
 
 	// Renderable constructor for a non "well-defined" primitive object such as a line.
 	// In the case of lines we ask for the 2 points and ModelMatrix is equal to Identity.
-	Renderable(const std::weak_ptr<Shader> shader, const std::vector<glm::vec3>& points, const std::vector<glm::vec4>& colors) : m_shader(shader),
-																																m_model_mat(glm::mat4(1.f)) {
+	Renderable(const std::weak_ptr<Shader> shader, const std::vector<glm::vec3>& points, const std::vector<glm::vec4>& colors) : m_shader(shader) {
 		// Mesh contains all the data of the renderable (vertex, colors, normals, ...)
 		m_render = std::make_unique<T>(points, colors);
 		init();
 	}
 
 	// Renderable construction for a model 3D object a.k.a. Renderable<Model>
-	Renderable(const std::weak_ptr<Shader> shader, const std::string& filename) : m_shader(shader),
-																				  m_model_mat(glm::mat4(1.f)) {
+	Renderable(const std::weak_ptr<Shader> shader, const std::string& filename) : m_shader(shader) {
 		// Mesh contains all the data of the renderable (vertex, colors, normals, ...)
 		m_render = std::make_unique<T>(filename);
 		init();
@@ -75,10 +69,6 @@ public:
 		m_render->setTexture(texture_path);
 	}
 
-private:
-	void init() {
-		m_polygon_mode = GL_FILL;
-	}
 public:
 
 	void setPolygonMode(GLuint polygon_mode) {
@@ -97,6 +87,8 @@ public:
 			glUniformMatrix4fv(shader_str->getUniformLocation("view"), 1, false, glm::value_ptr(viewer.getViewMatrix()));
 			glUniformMatrix4fv(shader_str->getUniformLocation("modelview"), 1, false, glm::value_ptr(viewer.getViewMatrix() * m_model_mat));
 			glUniformMatrix4fv(shader_str->getUniformLocation("projection"), 1, false, glm::value_ptr(Viewer::getProjectionMatrix()));
+
+			glUniform3fv(shader_str->getUniformLocation("tex_factor"), 1, glm::value_ptr(m_texcoords_factor));
 		}
 
 		m_render->draw(m_shader);
@@ -105,6 +97,14 @@ public:
 	void setLocalTransform(const LocalTransform& local_tr) {
 		m_transform = local_tr;
 		m_model_mat = local_tr.getModelMatrix();
+	}
+
+	const LocalTransform& getLocalTransform() const {
+		return m_transform;
+	}
+
+	virtual void setTexcoordsFactor(const glm::vec3& texcoords_factor) {
+		m_texcoords_factor = texcoords_factor;
 	}
 
 	void setColor(const glm::vec4& color) {
@@ -116,7 +116,15 @@ public:
 	}
 
 private:
+	void init() {
+		m_model_mat = glm::mat4(1.f);
+		m_polygon_mode = GL_FILL;
+		m_texcoords_factor = glm::vec3(1);
+	}
 
+private:
+	LocalTransform m_transform;
+	glm::vec3 m_texcoords_factor;
 	// The model matrix relative to the renderable
 	glm::mat4 m_model_mat;
 	// Shader of the renderable

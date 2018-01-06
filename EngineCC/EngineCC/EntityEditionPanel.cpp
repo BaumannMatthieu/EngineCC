@@ -119,7 +119,8 @@ void EditionWindow::render(const InputHandler& input, entityx::EntityManager& es
 		}
 		ImGui::Separator();
 		ImGui::Text("Texcoords factor :");
-		ImGui::InputFloat3(": X, Y, Z", reinterpret_cast<float *>(&tr.tex_factor));
+		//ImGui::InputFloat3(": X, Y, Z", reinterpret_cast<float *>(&tr.tex_factor));
+		ImGui::SliderFloat3(": X, Y, Z", reinterpret_cast<float *>(&tr.tex_factor), 0, 10);
 
 		//HierarchyEntity& hierarchy = HierarchyEntity::getHierarchyEntity();
 		//hierarchy.drawImGUI();
@@ -171,7 +172,11 @@ void EditionWindow::updateEntity(const std::string& name) {
 	physic->collision_shape->setLocalScaling(btVector3(tr.scale.x, tr.scale.y, tr.scale.z));
 	LocalTransform render_tr = (*render)->getLocalTransform();
 	render_tr.setScale(tr.scale);
+	// Update the transformation matrix of the renderable a.k.a its model matrix
 	(*render)->setLocalTransform(render_tr);
+
+	// Update the texcoords factor
+	(*render)->setTexcoordsFactor(tr.tex_factor);
 }
 
 std::ostream& operator<<(std::ostream& stream_out, const EditionWindow::Transform& transform) {
