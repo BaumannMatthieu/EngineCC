@@ -103,6 +103,10 @@ struct EditionWindow {
 		glm::vec3 tr;
 		glm::vec3 scale;
 		glm::vec3 rot;
+
+		// Textcoord multiplier factor in X, Y and Z directions
+		// tuneable by the user in the editor EditionWindow panel
+		glm::vec3 tex_factor;
 	};
 
 	void addEntity(const std::string& name, const Transform& tr, entityx::Entity entity);
@@ -112,8 +116,6 @@ struct EditionWindow {
 	void render(const InputHandler& input, entityx::EntityManager& es);
 	void reset();
 	void clear();
-
-	void setTransform(const std::string& name, const Transform& tr);
 
 private:
 	void updateEntity(const std::string& name);
@@ -433,9 +435,15 @@ public:
 				scale_info->SetAttribute("Y", tr.scale.y);
 				scale_info->SetAttribute("Z", tr.scale.z);
 
+				XMLElement* texcoords_factor_info = doc.NewElement("Texcoords_Factor");
+				texcoords_factor_info->SetAttribute("X", tr.tex_factor.x);
+				texcoords_factor_info->SetAttribute("Y", tr.tex_factor.y);
+				texcoords_factor_info->SetAttribute("Z", tr.tex_factor.z);
+
 				entity->InsertEndChild(rot_info);
 				entity->InsertEndChild(translation_info);
 				entity->InsertEndChild(scale_info);
+				entity->InsertEndChild(texcoords_factor_info);
 
 				entityList->InsertEndChild(entity);
 			}
@@ -495,9 +503,14 @@ public:
 					scale->QueryFloatAttribute("Y", &transform.scale.y);
 					scale->QueryFloatAttribute("Z", &transform.scale.z);
 
-					loadEntity(es, entity_name, entity_name, transform);
+					XMLElement* texcoords_factor = current_entity->FirstChildElement("Texcoords_Factor");
+					texcoords_factor->QueryFloatAttribute("X", &transform.tex_factor.x);
+					texcoords_factor->QueryFloatAttribute("Y", &transform.tex_factor.y);
+					texcoords_factor->QueryFloatAttribute("Z", &transform.tex_factor.z);
 
-					//edition_window.setTransform(name, transform);
+					std::size_t pos = entity_name.find("_");
+					const std::string& entity_filename = entity_name.substr(0, pos);
+					loadEntity(es, entity_name, entity_filename, transform);
 					
 					current_entity = current_entity->NextSiblingElement("Entity");
 				}
@@ -690,7 +703,7 @@ public:
 			assert(eResult == XML_SUCCESS);
 
 			ComponentsData data = {name, renderable_type, filepath, texture_path, mass, disable_angular_rotation};
-			EditionWindow::Transform transform = {glm::vec3(0), glm::vec3(1), glm::vec3(0)};
+			EditionWindow::Transform transform = {glm::vec3(0), glm::vec3(1), glm::vec3(0), glm::vec3(1)};
 			creationEntity(es, data, transform);
 		}
 

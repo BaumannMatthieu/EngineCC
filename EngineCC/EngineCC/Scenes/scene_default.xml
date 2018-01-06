@@ -1,0 +1,94 @@
+<Root>
+    <ListEntities>
+        <Entity name="name">
+            <Rotation X="0" Y="0" Z="0"/>
+            <Translation X="0" Y="1" Z="0"/>
+            <Scale X="2" Y="2" Z="2"/>
+            <Texcoords_Factor X="5" Y="1" Z="2"/>
+        </Entity>
+        <Entity name="name_10">
+            <Rotation X="0" Y="0" Z="0"/>
+            <Translation X="8" Y="1" Z="4"/>
+            <Scale X="2" Y="2" Z="2"/>
+            <Texcoords_Factor X="5" Y="1" Z="2"/>
+        </Entity>
+        <Entity name="name_11">
+            <Rotation X="0" Y="0" Z="0"/>
+            <Translation X="4" Y="1" Z="6"/>
+            <Scale X="2" Y="2" Z="2"/>
+            <Texcoords_Factor X="5" Y="1" Z="2"/>
+        </Entity>
+        <Entity name="name_12">
+            <Rotation X="0" Y="0" Z="0"/>
+            <Translation X="8" Y="1" Z="6"/>
+            <Scale X="2" Y="2" Z="2"/>
+            <Texcoords_Factor X="5" Y="1" Z="2"/>
+        </Entity>
+        <Entity name="name_13">
+            <Rotation X="0" Y="0" Z="0"/>
+            <Translation X="-0" Y="1" Z="6"/>
+            <Scale X="2" Y="2" Z="2"/>
+            <Texcoords_Factor X="5" Y="1" Z="2"/>
+        </Entity>
+        <Entity name="name_14">
+            <Rotation X="0" Y="0" Z="0"/>
+            <Translation X="6" Y="1" Z="6"/>
+            <Scale X="2" Y="2" Z="2"/>
+            <Texcoords_Factor X="5" Y="1" Z="2"/>
+        </Entity>
+        <Entity name="name_15">
+            <Rotation X="0" Y="0" Z="0"/>
+            <Translation X="2" Y="1" Z="6"/>
+            <Scale X="2" Y="2" Z="2"/>
+            <Texcoords_Factor X="5" Y="1" Z="2"/>
+        </Entity>
+        <Entity name="name_2">
+            <Rotation X="0" Y="0" Z="0"/>
+            <Translation X="0" Y="1" Z="2"/>
+            <Scale X="2" Y="2" Z="2"/>
+            <Texcoords_Factor X="5" Y="1" Z="2"/>
+        </Entity>
+        <Entity name="name_3">
+            <Rotation X="0" Y="0" Z="0"/>
+            <Translation X="0" Y="1" Z="4"/>
+            <Scale X="2" Y="2" Z="2"/>
+            <Texcoords_Factor X="5" Y="1" Z="2"/>
+        </Entity>
+        <Entity name="name_4">
+            <Rotation X="0" Y="0" Z="0"/>
+            <Translation X="0" Y="1" Z="-2"/>
+            <Scale X="2" Y="2" Z="2"/>
+            <Texcoords_Factor X="5" Y="1" Z="2"/>
+        </Entity>
+        <Entity name="name_5">
+            <Rotation X="0" Y="0" Z="0"/>
+            <Translation X="2" Y="1" Z="-2"/>
+            <Scale X="2" Y="2" Z="2"/>
+            <Texcoords_Factor X="5" Y="1" Z="2"/>
+        </Entity>
+        <Entity name="name_6">
+            <Rotation X="0" Y="0" Z="0"/>
+            <Translation X="6" Y="1" Z="-2"/>
+            <Scale X="2" Y="2" Z="2"/>
+            <Texcoords_Factor X="5" Y="1" Z="2"/>
+        </Entity>
+        <Entity name="name_7">
+            <Rotation X="0" Y="0" Z="0"/>
+            <Translation X="8" Y="1" Z="-2"/>
+            <Scale X="2" Y="2" Z="2"/>
+            <Texcoords_Factor X="5" Y="1" Z="2"/>
+        </Entity>
+        <Entity name="name_8">
+            <Rotation X="0" Y="0" Z="0"/>
+            <Translation X="8" Y="1" Z="-0"/>
+            <Scale X="2" Y="2" Z="2"/>
+            <Texcoords_Factor X="5" Y="1" Z="2"/>
+        </Entity>
+        <Entity name="name_9">
+            <Rotation X="0" Y="0" Z="0"/>
+            <Translation X="8" Y="1" Z="2"/>
+            <Scale X="2" Y="2" Z="2"/>
+            <Texcoords_Factor X="5" Y="1" Z="2"/>
+        </Entity>
+    </ListEntities>
+</Root>

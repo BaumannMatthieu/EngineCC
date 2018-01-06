@@ -118,6 +118,8 @@ void EditionWindow::render(const InputHandler& input, entityx::EntityManager& es
 			ImGui::TreePop();
 		}
 		ImGui::Separator();
+		ImGui::Text("Texcoords factor :");
+		ImGui::InputFloat3(": X, Y, Z", reinterpret_cast<float *>(&tr.tex_factor));
 
 		//HierarchyEntity& hierarchy = HierarchyEntity::getHierarchyEntity();
 		//hierarchy.drawImGUI();
@@ -130,7 +132,6 @@ void EditionWindow::render(const InputHandler& input, entityx::EntityManager& es
 		}
 
 		if (ImGui::Button("Duplicate")) {
-			//hierarchy.m_root->deleteEntity(selected->getName());
 			duplicateEntity(es);
 		}
 
@@ -171,13 +172,6 @@ void EditionWindow::updateEntity(const std::string& name) {
 	LocalTransform render_tr = (*render)->getLocalTransform();
 	render_tr.setScale(tr.scale);
 	(*render)->setLocalTransform(render_tr);
-}
-
-void EditionWindow::setTransform(const std::string& name, const Transform& tr) {
-	m_transforms[name] = tr;
-
-	std::cout << name << std::endl;
-	std::cout << m_transforms[name] << std::endl;
 }
 
 std::ostream& operator<<(std::ostream& stream_out, const EditionWindow::Transform& transform) {
