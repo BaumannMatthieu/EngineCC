@@ -106,9 +106,10 @@ struct EditionWindow {
 	};
 
 	void addEntity(const std::string& name, const Transform& tr, entityx::Entity entity);
+	void duplicateEntity(entityx::EntityManager& es);
 	void deleteEntity(const std::string& name);
 
-	void render(const InputHandler& input);
+	void render(const InputHandler& input, entityx::EntityManager& es);
 	void reset();
 	void clear();
 
@@ -119,6 +120,7 @@ private:
 
 public:
 	std::map<std::string, Transform> m_transforms;
+	std::map<std::string, int> m_ids;
 	std::string m_name_entity_picked;
 };
 
@@ -127,7 +129,7 @@ std::ostream& operator<<(std::ostream& stream_out, const EditionWindow::Transfor
 namespace fs = std::experimental::filesystem;
 class EntityCreationPanel {
 public:
-	EntityCreationPanel() : m_model_filepath("") {
+	EntityCreationPanel() {
 	}
 
 	~EntityCreationPanel() {
@@ -317,8 +319,8 @@ public:
 		edition_panel.addEntity(data.name, tr, entity);
 	}
 
-	void loadEntity(entityx::EntityManager& es, const std::string& name, const EditionWindow::Transform& tr) {
-		std::string filename = "C:\\Users\\Matthieu\\source\\repos\\EngineCC\\EngineCC\\EngineCC\\Scenes\\" + std::string(name) + ".xml";
+	void loadEntity(entityx::EntityManager& es, const std::string& entity_name, const std::string& entity_filename, const EditionWindow::Transform& tr) {
+		std::string filename = "C:\\Users\\Matthieu\\source\\repos\\EngineCC\\EngineCC\\EngineCC\\Scenes\\" + std::string(entity_filename) + ".xml";
 
 		XMLDocument doc;
 		XMLError eResult = doc.LoadFile(filename.c_str());
@@ -346,14 +348,16 @@ public:
 			if (std::strcmp(renderable_type_str, "model") == 0) {
 				filename = render_component->Attribute("filename");
 				assert(filename != nullptr);
-				texture_path = render_component->Attribute("texture_path");
-				assert(texture_path != nullptr);
 				renderable_type = ComponentsData::MODEL;
 			}
 			else if(std::strcmp(renderable_type_str, "cube") == 0) {
+				texture_path = render_component->Attribute("texture_path");
+				assert(texture_path != nullptr);
 				renderable_type = ComponentsData::CUBE;
 			}
 			else if (std::strcmp(renderable_type_str, "plane") == 0) {
+				texture_path = render_component->Attribute("texture_path");
+				assert(texture_path != nullptr);
 				renderable_type = ComponentsData::PLANE;
 			}
 
@@ -370,7 +374,7 @@ public:
 			angular_rot_elt->QueryBoolText(&disable_angular_rotation);
 
 			/// Create the entity with all the data retrieved
-			ComponentsData data = {name, renderable_type, filename, texture_path, mass, disable_angular_rotation};
+			ComponentsData data = {entity_name, renderable_type, filename, texture_path, mass, disable_angular_rotation};
 			creationEntity(es, data, tr);
 		}
 	}
@@ -473,7 +477,7 @@ public:
 					const char* name_attribute = nullptr;
 					name_attribute = current_entity->Attribute("name");
 					assert(name_attribute != nullptr);
-					std::string name = name_attribute;
+					std::string entity_name = name_attribute;
 
 					EditionWindow::Transform transform;
 					XMLElement* rotation = current_entity->FirstChildElement("Rotation");
@@ -491,7 +495,7 @@ public:
 					scale->QueryFloatAttribute("Y", &transform.scale.y);
 					scale->QueryFloatAttribute("Z", &transform.scale.z);
 
-					loadEntity(es, name, transform);
+					loadEntity(es, entity_name, entity_name, transform);
 
 					//edition_window.setTransform(name, transform);
 					
@@ -661,13 +665,17 @@ public:
 				render_elt->SetAttribute("renderable_type", "model");
 				assert(filepath != NULL);
 				render_elt->SetAttribute("filename", filepath);
-				render_elt->SetAttribute("texture_path", filepath);
+				
 			}
 			else if(renderable_type == ComponentsData::CUBE) {
 				render_elt->SetAttribute("renderable_type", "cube");
+				assert(texture_path != NULL);
+				render_elt->SetAttribute("texture_path", texture_path);
 			}
 			else if (renderable_type == ComponentsData::PLANE) {		
 				render_elt->SetAttribute("renderable_type", "plane");
+				assert(texture_path != NULL);
+				render_elt->SetAttribute("texture_path", texture_path);
 			}
 
 			XMLElement* mass_elt = doc.NewElement("mass");
@@ -707,7 +715,6 @@ public:
 	}
 
 private:
-	std::string m_model_filepath;
 	static int id;
 };
 

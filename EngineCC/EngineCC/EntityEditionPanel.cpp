@@ -16,8 +16,35 @@ void EditionWindow::addEntity(const std::string& name, const Transform& tr, enti
 
 	updateEntity(name);
 
+	std::size_t pos = name.find("_");
+	const std::string& entity_filename = name.substr(0, pos);
+
+	if (m_ids.find(entity_filename) == m_ids.end()) {
+		m_ids[entity_filename] = 2;
+	}
+	else {
+		m_ids[entity_filename] = m_ids[entity_filename] + 1;
+	}
+
 	//HierarchyEntity& hierarchy = HierarchyEntity::getHierarchyEntity();
 	//hierarchy.m_root->addEntity();
+}
+
+void EditionWindow::duplicateEntity(entityx::EntityManager& es) {
+	const std::string& entity_to_duplicate_name = m_name_entity_picked;
+	std::size_t pos = entity_to_duplicate_name.find("_");
+	
+	// reconstruct a new name
+	const std::string& entity_filename = entity_to_duplicate_name.substr(0, pos);
+	std::string entity_name = entity_filename;
+	entity_name += "_";
+	entity_name += std::to_string(m_ids[entity_filename]);
+
+	EntityCreationPanel& creationWindow = Singleton<EntityCreationPanel>::getInstance();
+	// create a new entity with the same properties as the one selected
+	// loadEntity will first read the xml file of the entity and, parse it and create it through the
+	// EntityCreationPanel::creationEntity method
+	creationWindow.loadEntity(es, entity_name, entity_filename, m_transforms[m_name_entity_picked]);
 }
 
 void EditionWindow::deleteEntity(const std::string& name) {
@@ -39,7 +66,7 @@ void EditionWindow::clear() {
 	world.free();
 }
 
-void EditionWindow::render(const InputHandler& input) {
+void EditionWindow::render(const InputHandler& input, entityx::EntityManager& es) {
 	// Mouse input handling
 	bool hit = false;
 	btVector3 intersection_point(0, 0, 0);
@@ -64,6 +91,8 @@ void EditionWindow::render(const InputHandler& input) {
 		ImGui::Checkbox("Snap to grid", &snap_to_grid);
 
 		ImGui::Separator();
+
+		ImGui::Text(("Entity name selected : " + m_name_entity_picked).c_str());
 		if (hit) {
 			tr.tr = glm::vec3(intersection_point.x(), intersection_point.y(), intersection_point.z());
 			if (snap_to_grid) {
@@ -98,6 +127,11 @@ void EditionWindow::render(const InputHandler& input) {
 		if (ImGui::Button("Delete")) {
 			//hierarchy.m_root->deleteEntity(selected->getName());
 			deleteEntity(m_name_entity_picked);
+		}
+
+		if (ImGui::Button("Duplicate")) {
+			//hierarchy.m_root->deleteEntity(selected->getName());
+			duplicateEntity(es);
 		}
 
 		ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);

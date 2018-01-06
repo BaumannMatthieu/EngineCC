@@ -58,7 +58,7 @@ void Editor::run() {
 	}
 
 	EditionWindow& entity_panel = Singleton<EditionWindow>::getInstance();
-	entity_panel.render(m_input_handler);
+	entity_panel.render(m_input_handler, entities);
 	EntityCreationPanel& creation_panel = Singleton<EntityCreationPanel>::getInstance();
 	creation_panel.render(entities);
 	creation_panel.loadSaveSceneWindow(entities);
