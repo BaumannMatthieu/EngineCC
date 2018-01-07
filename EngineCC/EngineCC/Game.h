@@ -26,10 +26,13 @@ public:
 
 private:
 	void createGroundEntity(entityx::EntityManager &es);
+	void createDoorEntity(entityx::EntityManager &es);
 	void createPlayerEntity(entityx::EntityManager &es);
 	void createArrowEntity(entityx::EntityManager &es, entityx::EventManager &events);
 
 	void addEntity(const std::string& name, entityx::Entity entity);
+
+	void initScripts() const;
 
 private:
 	Viewer m_viewer;

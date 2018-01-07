@@ -1,7 +1,7 @@
 <Root>
     <Name>name</Name>
     <Components>
-        <Render renderable_type="cube" texture_path="C:\Users\Matthieu\source\repos\EngineCC\EngineCC\EngineCC\Content\wall2.jpg"/>
+        <Render renderable_type="model" filename="C:\Users\Matthieu\source\repos\EngineCC\EngineCC\EngineCC\Content\Medieval_Door\Privy Council Door.obj"/>
         <Physics>
             <mass>0</mass>
             <angular_rotation_disabled>false</angular_rotation_disabled>

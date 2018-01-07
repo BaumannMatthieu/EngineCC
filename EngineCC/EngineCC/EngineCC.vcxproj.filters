@@ -88,6 +88,9 @@
     <ClCompile Include="tinyxml2.cpp">
       <Filter>Utils</Filter>
     </ClCompile>
+    <ClCompile Include="FiniteStateMachine.cpp">
+      <Filter>Game</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
@@ -206,6 +209,12 @@
     </ClInclude>
     <ClInclude Include="tinyxml2.h">
       <Filter>Utils</Filter>
+    </ClInclude>
+    <ClInclude Include="FiniteStateMachine.h">
+      <Filter>Game</Filter>
+    </ClInclude>
+    <ClInclude Include="ScriptSystem.h">
+      <Filter>Game\Systems</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

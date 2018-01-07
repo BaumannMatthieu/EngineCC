@@ -8,6 +8,7 @@
 #include "GameProgram.h"
 #include "Entity.h"
 #include "InputHandler.h"
+#include "FiniteStateMachine.h"
 
 #include "Manager.h"
 
@@ -19,65 +20,6 @@ uint16_t GameProgram::height = 1024;
 std::unique_ptr<Editor> GameProgram::editor = nullptr;
 std::unique_ptr<Game> GameProgram::game = nullptr;
 Viewer* GameProgram::m_current_viewer = nullptr;
-
-class FiniteStateMachine {
-public:
-	struct Transition;
-	struct State {
-		State(const std::function<void()>& action_f, const std::function<void()>& configure_f = []() {}) : m_action_f(action_f), m_configure_f(configure_f) {
-		}
-
-		void run() const {
-			m_action_f();
-		}
-
-		void configure() const {
-			m_configure_f();
-		}
-
-		void addTransition(const Transition& tr) {
-			m_transitions.push_back(tr);
-		}
-
-		const std::vector<Transition>& getAllTransitions() const {
-			return m_transitions;
-		}
-	private:
-		std::function<void()> m_action_f;
-		std::function<void()> m_configure_f;
-		std::vector<Transition> m_transitions;
-	};
-
-	struct Transition {
-		Transition(const State* next, const std::function<bool()>& func) : m_next(next), m_func(func) {
-		}
-		~Transition() {
-		}
-
-		std::function<bool()> m_func;
-		const State* m_next;
-	};
-
-	void run() {
-		m_current->run();
-
-		for (auto& tr : m_current->getAllTransitions()) {
-			if (tr.m_func()) {
-				m_current = tr.m_next;
-				m_current->configure();
-				break;
-			}
-		}
-	}
-
-	FiniteStateMachine(const State* root) : m_root(root), m_current(m_root) {
-	}
-	~FiniteStateMachine() {
-	}
-private:
-	const State* m_root;
-	const State* m_current;
-};
 
 void SetSDLFlags() {
 	// Request opengl 4.5 context

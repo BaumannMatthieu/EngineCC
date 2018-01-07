@@ -6,11 +6,14 @@
 #include "World.h"
 #include "GameProgram.h"
 #include "InputHandler.h"
+#include "Manager.h"
 
 #include "Components.h"
 
 #include "RenderSystem.h"
 #include "PhysicSystem.h"
+#include "ScriptSystem.h"
+#include "PickingSystem.h"
 
 #include <entityx/entityx.h>
 
@@ -89,7 +92,7 @@ void Game::createPlayerEntity(entityx::EntityManager &es) {
 	entity.assign<Physics>(physics);
 
 	// Movable Component
-	float player_speed = 4.f;
+	float player_speed = 8.f;
 	Movable movable(player_speed);
 	entity.assign<Movable>(movable);
 
@@ -104,8 +107,8 @@ void Game::createGroundEntity(entityx::EntityManager &es) {
 	Manager<std::string, std::shared_ptr<Shader>>& shaders = Manager<std::string, std::shared_ptr<Shader>>::getInstance();
 	std::shared_ptr<Renderable<Plane>> ground_render = std::make_shared<Renderable<Plane>>(shaders.get("simple"));
 	LocalTransform tr;
-	tr.setTranslation(glm::vec3(10, 3, 0));
-	tr.setScale(glm::vec3(10, 0, 10));
+	tr.setTranslation(glm::vec3(0, 0, 0));
+	tr.setScale(glm::vec3(1, 0, 1));
 	ground_render->setLocalTransform(tr);
 	entity.assign<Render>(ground_render);
 
@@ -129,7 +132,61 @@ void Game::createGroundEntity(entityx::EntityManager &es) {
 	Physics physics = { ground_shape, motion_state, body, mass, local_inertia };
 	entity.assign<Physics>(physics);
 
+	// Add an open script to the door
+
 	addEntity("ground", entity);
+}
+
+// Creation of all the in-game entities in Game constructor's class
+void Game::createDoorEntity(entityx::EntityManager &es) {
+	entityx::Entity entity = es.create();
+
+	// Render Component
+	Manager<std::string, std::shared_ptr<Shader>>& shaders = Manager<std::string, std::shared_ptr<Shader>>::getInstance();
+	std::shared_ptr<Renderable<Plane>> render = std::make_shared<Renderable<Plane>>(shaders.get("simple"));
+	LocalTransform tr;
+	//tr.setTranslation(glm::vec3(5, 0, 0));
+	tr.setScale(glm::vec3(3, 0, 5));
+	//tr.setRotation(glm::vec3(0, 0, 1), 90*2*M_PI/360.f);
+	render->setLocalTransform(tr);
+	entity.assign<Render>(render);
+
+	// Physics Component
+	std::vector<glm::vec3>& vertices = render->getPrimitive().getVertices();
+
+	btConvexHullShape* entity_shape = new btConvexHullShape();
+	for (int i = 0; i < vertices.size(); ++i) {
+		entity_shape->addPoint(btVector3(vertices[i].x, vertices[i].y, vertices[i].z));
+	}
+	entity_shape->optimizeConvexHull();
+
+	btTransform entity_tr;
+	entity_tr.setIdentity();
+	entity_tr.setOrigin(btVector3(5, 2, 0));
+	entity_tr.setRotation(btQuaternion(0, M_PI / 2.f, 0));
+	entity_shape->setLocalScaling(btVector3(3, 0, 5));
+	btScalar mass(0.);
+	//rigidbody is dynamic if and only if mass is non zero, otherwise static
+	bool is_dynamic = (mass != 0.f);
+	btVector3 local_inertia(0, 0, 0);
+	if (is_dynamic)
+		entity_shape->calculateLocalInertia(mass, local_inertia);
+
+	//using motionstate is optional, it provides interpolation capabilities, and only synchronizes 'active' objects
+	btDefaultMotionState* motion_state = new btDefaultMotionState(entity_tr);
+	btRigidBody::btRigidBodyConstructionInfo rbInfo(mass, motion_state, entity_shape, local_inertia);
+	btRigidBody* body = new btRigidBody(rbInfo);
+	body->setFriction(2.f);
+	Physics physics = { entity_shape, motion_state, body, mass, local_inertia };
+	entity.assign<Physics>(physics);
+
+	// Script Component
+	Manager<std::string, std::shared_ptr<FiniteStateMachine>>& scripts = Manager<std::string, std::shared_ptr<FiniteStateMachine>>::getInstance();
+	Script script;
+	script.m_scripts[Script::INTERACTION] = scripts.get("door_opening");
+	entity.assign<Script>(script);
+
+	addEntity("door", entity);
 }
 
 // Creation of all the in-game entities in Game constructor's class
@@ -172,11 +229,12 @@ void Game::createArrowEntity(entityx::EntityManager &es, entityx::EventManager &
 void Game::init(entityx::EntityManager& es_editor) {
 	entities.reset();
 
-	m_viewer.setPosition(glm::vec3(5, 5, 5));
+	m_viewer.setPosition(glm::vec3(0, 5, 0));
 	m_viewer.setDirection(glm::vec3(1, 0, 0));
 	
 	createPlayerEntity(entities);
 	createGroundEntity(entities);
+	createDoorEntity(entities);
 
 	for (entityx::Entity entity : es_editor.entities_with_components<Render, Physics>()) {
 		entities.create_from_copy(entity);
@@ -197,14 +255,13 @@ Game::Game(GameProgram& program, InputHandler& input_handler) : ProgramState(pro
 																	  m_theta(0.f),
 																	  m_alpha(0.f),
 																	  m_player_direction(0.f) {
-	createPlayerEntity(entities);
-	createGroundEntity(entities);
-
+	World& world = Singleton<World>::getInstance();
+	
 	/// Set up systems
 	systems.add<MovementSystem>();
-	World& world = Singleton<World>::getInstance();
 	systems.add<PhysicSystem>(entities, *(world.dynamic_world));
 	systems.add<RenderSystem>(m_viewer);
+	systems.add<ScriptSystem>();
 
 	systems.configure();
 
@@ -236,6 +293,59 @@ Game::Game(GameProgram& program, InputHandler& input_handler) : ProgramState(pro
 		std::cout << "jump" << std::endl;
 		direction_player += glm::vec3(0, 10.f, 0);
 	}));
+
+	/// Interaction Key : e 
+	m_commands.insert(std::pair<int, std::function<void()> >(SDLK_e, [&viewer, &input_handler, &ev]() {
+		std::cout << "interaction" << std::endl;
+		bool hit = false;
+		btVector3 intersection_point;
+		const std::string& name_entity = PickingSystem::getPickedEntity(input_handler, *GameProgram::m_current_viewer, hit, intersection_point);
+		if (hit) {
+			btVector3 player_pos(viewer.getPosition().x, viewer.getPosition().y, viewer.getPosition().z);
+			btScalar distance = (player_pos - intersection_point).norm();
+#define DISTANCE_MIN_INTERACTION 3.f
+			if (distance < DISTANCE_MIN_INTERACTION) {
+				World& world = Singleton<World>::getInstance();
+				ev.emit<LaunchEvent>({ world.get(name_entity) });
+			}
+		}
+	}));
+
+	// Load the default scene.xml here
+
+	// Init scripts
+	initScripts();
+
+	// Add game entities
+	createPlayerEntity(entities);
+	createGroundEntity(entities);
+	createDoorEntity(entities);
+
+
+	LaunchEvent launch_script = {world.get("door")};
+	events.emit<LaunchEvent>(launch_script);
+}
+
+void Game::initScripts() const {
+	Manager<std::string, std::shared_ptr<FiniteStateMachine>>& scripts = Manager<std::string, std::shared_ptr<FiniteStateMachine>>::getInstance();
+
+	/// Open door script
+	FiniteStateMachine::State* door_opening = new FiniteStateMachine::State(
+		[]() {
+		std::cout << "Door opening ! grrrr" << std::endl;
+	});
+
+	/*
+	editorState->addTransition(FiniteStateMachine::Transition(gameState, [&inputHandler, this] {
+		if (inputHandler.m_keydown) {
+			if (inputHandler.m_key.find(SDLK_RETURN) != inputHandler.m_key.end()) {
+				return true;
+			}
+		}
+		return false;
+	}));*/
+
+	scripts.insert("door_opening", std::make_shared<FiniteStateMachine>(door_opening));
 }
 
 Game::~Game() {

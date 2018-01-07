@@ -3,6 +3,7 @@
 
 #include "btBulletDynamicsCommon.h"
 #include "Renderable.h"
+#include "FiniteStateMachine.h"
 
 /// Component Definitions
 using Render = std::shared_ptr<RenderObject>;
@@ -17,7 +18,6 @@ struct Physics {
 	btVector3 local_inertia;
 
 	Physics& operator=(const Physics& other) {
-		std::cout << "HELOO" << std::endl;
 		if (&other == this)
 			return *this;
 
@@ -37,4 +37,20 @@ struct Movable {
 
 	float speed;
 	//Pathfinding list of places to go
+};
+
+struct Script {
+	// An entity can have multiple scripts that can be triggered
+	// in different ways :
+	// - INTERACTION : the player interact with the entity by pressing 'E'
+	// - ATTACK : the player attack the entity. The entity can response by launching a special ATTACK script
+	// that depicts its strategy during the fight
+	// - LOCATION : the script is launched when the player is in a particular location
+	enum Activation {
+		INTERACTION,
+		ATTACK,
+		LOCATION
+	};
+
+	std::map<Activation, std::weak_ptr<FiniteStateMachine>> m_scripts;
 };

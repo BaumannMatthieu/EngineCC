@@ -7,7 +7,7 @@
 class Viewer
 {
 public:
-	Viewer(const glm::vec3& position = glm::vec3(10.f, 10.f, 10.f),
+	Viewer(const glm::vec3& position = glm::vec3(0, 10, 0),
 		   const glm::vec3& center = glm::vec3(0.f));
 	~Viewer();
 

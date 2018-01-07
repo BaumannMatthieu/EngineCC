@@ -120,6 +120,7 @@
   <ItemGroup>
     <ClCompile Include="Editor.cpp" />
     <ClCompile Include="EntityEditionPanel.cpp" />
+    <ClCompile Include="FiniteStateMachine.cpp" />
     <ClCompile Include="Game.cpp" />
     <ClCompile Include="GameProgram.cpp" />
     <ClCompile Include="imgui.cpp" />
@@ -156,6 +157,7 @@
     <ClInclude Include="Cube.h" />
     <ClInclude Include="Editor.h" />
     <ClInclude Include="EntityEditionPanel.h" />
+    <ClInclude Include="FiniteStateMachine.h" />
     <ClInclude Include="Game.h" />
     <ClInclude Include="GameProgram.h" />
     <ClInclude Include="imconfig.h" />
@@ -173,6 +175,7 @@
     <ClInclude Include="ProgramState.h" />
     <ClInclude Include="Renderable.h" />
     <ClInclude Include="RenderSystem.h" />
+    <ClInclude Include="ScriptSystem.h" />
     <ClInclude Include="Shader.h" />
     <ClInclude Include="Singleton.h" />
     <ClInclude Include="stb_rect_pack.h" />

@@ -94,8 +94,6 @@ bool CubeMapTexture::load() {
 	glGenTextures(1, &m_index);
 	glBindTexture(GL_TEXTURE_CUBE_MAP, m_index);
 
-
-
 	SDL_Surface* data = IMG_Load(m_filename.c_str());
 	if (data != NULL) {
 		glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X, 0, GL_RGB, data->w, data->h, 0,
