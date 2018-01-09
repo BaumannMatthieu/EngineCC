@@ -1,17 +1,19 @@
+#include <entityx\Entity.h>
+
 #include "FiniteStateMachine.h"
 
 /// FiniteStateMachine::State definitions
-FiniteStateMachine::State::State(const std::function<void()>& action_f,
-	const std::function<void()>& configure_f) : m_action_f(action_f),
+FiniteStateMachine::State::State(const std::function<void(entityx::Entity, entityx::Entity)>& action_f,
+	const std::function<void(entityx::Entity, entityx::Entity)>& configure_f) : m_action_f(action_f),
 												m_configure_f(configure_f) {
 }
 
-void FiniteStateMachine::State::run() const {
-	m_action_f();
+void FiniteStateMachine::State::run(entityx::Entity entity, entityx::Entity player) const {
+	m_action_f(entity, player);
 }
 
-void FiniteStateMachine::State::configure() const {
-	m_configure_f();
+void FiniteStateMachine::State::configure(entityx::Entity entity, entityx::Entity player) const {
+	m_configure_f(entity, player);
 }
 
 void FiniteStateMachine::State::addTransition(const Transition& tr) {
@@ -23,7 +25,7 @@ const std::vector<FiniteStateMachine::Transition>& FiniteStateMachine::State::ge
 }
 
 /// FiniteStateMachine::Transition definitions
-FiniteStateMachine::Transition::Transition(const State* next, const std::function<bool()>& func) : m_next(next), m_func(func) {
+FiniteStateMachine::Transition::Transition(const State* next, const std::function<bool(entityx::Entity, entityx::Entity)>& func) : m_next(next), m_func(func) {
 }
 FiniteStateMachine::Transition::~Transition() {
 }
@@ -35,13 +37,13 @@ FiniteStateMachine::FiniteStateMachine(const State* root) : m_root(root), m_curr
 FiniteStateMachine::~FiniteStateMachine() {
 }
 
-bool FiniteStateMachine::run() {
-	m_current->run();
+bool FiniteStateMachine::run(entityx::Entity entity, entityx::Entity player) {
+	m_current->run(entity, player);
 
 	for (auto& tr : m_current->getAllTransitions()) {
-		if (tr.m_func()) {
+		if (tr.m_func(entity, player)) {
 			m_current = tr.m_next;
-			m_current->configure();
+			m_current->configure(entity, player);
 			break;
 		}
 	}

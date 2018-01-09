@@ -11,11 +11,14 @@ using Render = std::shared_ptr<RenderObject>;
 struct Physics {
 	// if nullptr => no collision
 	btCollisionShape* collision_shape;
+	// One constraint per entity possible
 	btDefaultMotionState* motion_state;
 	btRigidBody* rigid_body;
 
 	float mass;
 	btVector3 local_inertia;
+
+	btTypedConstraint* constraint;
 
 	Physics& operator=(const Physics& other) {
 		if (&other == this)

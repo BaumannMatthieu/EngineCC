@@ -6,6 +6,7 @@
 
 #include "ProgramState.h"
 #include "Viewer.h"
+#include "World.h"
 
 class Game : public ProgramState, public entityx::EntityX
 {
@@ -26,7 +27,7 @@ public:
 
 private:
 	void createGroundEntity(entityx::EntityManager &es);
-	void createDoorEntity(entityx::EntityManager &es);
+	void createDoorEntity(entityx::EntityManager &es, World& world);
 	void createPlayerEntity(entityx::EntityManager &es);
 	void createArrowEntity(entityx::EntityManager &es, entityx::EventManager &events);
 

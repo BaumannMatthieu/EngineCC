@@ -36,6 +36,13 @@ public:
 
 	static uint16_t width;
 	static uint16_t height;
+
+	enum State {
+		GAME, 
+		EDITOR,
+		MENU
+	};
+	static State state;
 };
 
 

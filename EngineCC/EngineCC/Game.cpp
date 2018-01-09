@@ -16,6 +16,7 @@
 #include "PickingSystem.h"
 
 #include <entityx/entityx.h>
+#include <glm/gtx/vector_angle.hpp>
 
 /// Event Definitions
 struct DisplacementEvent {
@@ -88,7 +89,7 @@ void Game::createPlayerEntity(entityx::EntityManager &es) {
 	// Disable angular rotation when hitting another body
 	body->setAngularFactor(0);
 
-	Physics physics = { entity_shape, motion_state, body, mass, local_inertia };
+	Physics physics = { entity_shape, motion_state, body, mass, local_inertia, nullptr };
 	entity.assign<Physics>(physics);
 
 	// Movable Component
@@ -129,7 +130,7 @@ void Game::createGroundEntity(entityx::EntityManager &es) {
 	btRigidBody::btRigidBodyConstructionInfo rbInfo(mass, motion_state, ground_shape, local_inertia);
 	btRigidBody* body = new btRigidBody(rbInfo);
 	body->setFriction(2.f);
-	Physics physics = { ground_shape, motion_state, body, mass, local_inertia };
+	Physics physics = { ground_shape, motion_state, body, mass, local_inertia, nullptr };
 	entity.assign<Physics>(physics);
 
 	// Add an open script to the door
@@ -138,15 +139,20 @@ void Game::createGroundEntity(entityx::EntityManager &es) {
 }
 
 // Creation of all the in-game entities in Game constructor's class
-void Game::createDoorEntity(entityx::EntityManager &es) {
+void Game::createDoorEntity(entityx::EntityManager &es, World& world) {
 	entityx::Entity entity = es.create();
 
 	// Render Component
 	Manager<std::string, std::shared_ptr<Shader>>& shaders = Manager<std::string, std::shared_ptr<Shader>>::getInstance();
-	std::shared_ptr<Renderable<Plane>> render = std::make_shared<Renderable<Plane>>(shaders.get("simple"));
+	std::shared_ptr<Renderable<Cube>> render = std::make_shared<Renderable<Cube>>(shaders.get("simple"));
 	LocalTransform tr;
+
+	float length = 4.f;
+	float height = 6.f;
+	float angle = M_PI / 4.f;
+
 	//tr.setTranslation(glm::vec3(5, 0, 0));
-	tr.setScale(glm::vec3(3, 0, 5));
+	tr.setScale(glm::vec3(length, height, 0.4));
 	//tr.setRotation(glm::vec3(0, 0, 1), 90*2*M_PI/360.f);
 	render->setLocalTransform(tr);
 	entity.assign<Render>(render);
@@ -154,18 +160,19 @@ void Game::createDoorEntity(entityx::EntityManager &es) {
 	// Physics Component
 	std::vector<glm::vec3>& vertices = render->getPrimitive().getVertices();
 
-	btConvexHullShape* entity_shape = new btConvexHullShape();
+	/*btConvexHullShape* entity_shape = new btConvexHullShape();
 	for (int i = 0; i < vertices.size(); ++i) {
 		entity_shape->addPoint(btVector3(vertices[i].x, vertices[i].y, vertices[i].z));
 	}
-	entity_shape->optimizeConvexHull();
+	entity_shape->optimizeConvexHull();*/
+	btCollisionShape* entity_shape = new btBoxShape(btVector3(0.5, 0.5, 0.5));
 
 	btTransform entity_tr;
 	entity_tr.setIdentity();
-	entity_tr.setOrigin(btVector3(5, 2, 0));
-	entity_tr.setRotation(btQuaternion(0, M_PI / 2.f, 0));
-	entity_shape->setLocalScaling(btVector3(3, 0, 5));
-	btScalar mass(0.);
+	entity_tr.setOrigin(btVector3(cos(angle) * length / 2, height / 2, - sin(angle) * length / 2));
+	entity_tr.setRotation(btQuaternion(angle, 0, 0));
+	entity_shape->setLocalScaling(btVector3(length, height, 0.4));
+	btScalar mass(1.);
 	//rigidbody is dynamic if and only if mass is non zero, otherwise static
 	bool is_dynamic = (mass != 0.f);
 	btVector3 local_inertia(0, 0, 0);
@@ -176,8 +183,19 @@ void Game::createDoorEntity(entityx::EntityManager &es) {
 	btDefaultMotionState* motion_state = new btDefaultMotionState(entity_tr);
 	btRigidBody::btRigidBodyConstructionInfo rbInfo(mass, motion_state, entity_shape, local_inertia);
 	btRigidBody* body = new btRigidBody(rbInfo);
-	body->setFriction(2.f);
-	Physics physics = { entity_shape, motion_state, body, mass, local_inertia };
+	body->setActivationState(DISABLE_DEACTIVATION);
+
+	// Add hinge constraint
+	btVector3 pivot(-length / 2.f, 0, 0);
+	btVector3 axis(0, 1, 0);
+
+	btHingeConstraint* hinge_constraint = new btHingeConstraint(*body, pivot, axis);
+	hinge_constraint->setLimit(angle - M_PI * 0.5, angle + M_PI * 0.5);
+
+	/// For debug purposes
+	hinge_constraint->setDbgDrawSize(btScalar(5.f));
+
+	Physics physics = { entity_shape, motion_state, body, mass, local_inertia, hinge_constraint};
 	entity.assign<Physics>(physics);
 
 	// Script Component
@@ -220,7 +238,7 @@ void Game::createArrowEntity(entityx::EntityManager &es, entityx::EventManager &
 	btRigidBody* body = new btRigidBody(rbInfo);
 	body->setLinearVelocity(btVector3(m_viewer.getDirection().x, m_viewer.getDirection().y, m_viewer.getDirection().z));
 
-	Physics physics = { arrow_shape, motion_state, body, mass, local_inertia };
+	Physics physics = { arrow_shape, motion_state, body, mass, local_inertia, nullptr };
 	entity.assign<Physics>(physics);
 	
 	addEntity("arrow", entity);
@@ -229,12 +247,14 @@ void Game::createArrowEntity(entityx::EntityManager &es, entityx::EventManager &
 void Game::init(entityx::EntityManager& es_editor) {
 	entities.reset();
 
+	World& world = Singleton<World>::getInstance();
+
 	m_viewer.setPosition(glm::vec3(0, 5, 0));
 	m_viewer.setDirection(glm::vec3(1, 0, 0));
 	
 	createPlayerEntity(entities);
 	createGroundEntity(entities);
-	createDoorEntity(entities);
+	createDoorEntity(entities, world);
 
 	for (entityx::Entity entity : es_editor.entities_with_components<Render, Physics>()) {
 		entities.create_from_copy(entity);
@@ -251,17 +271,42 @@ void Game::clear() {
 	m_game_entity_names.clear();
 }
 
+// Returns true if picked entity is at a minimal distance of interaction. Returns false otherwise (no picked entity or
+// too far).
+bool isEntityPerInteraction(entityx::Entity& entity, const InputHandler& input_handler, const Viewer& viewer) {
+	bool hit = false;
+	btVector3 intersection_point;
+	const std::string& name_entity = PickingSystem::getPickedEntity(input_handler, *GameProgram::m_current_viewer, hit, intersection_point);
+	if (hit) {
+		btVector3 player_pos(viewer.getPosition().x, viewer.getPosition().y, viewer.getPosition().z);
+		btScalar distance = (player_pos - intersection_point).norm();
+#define DISTANCE_MIN_INTERACTION 10.f
+		if (distance < DISTANCE_MIN_INTERACTION) {
+			World& world = Singleton<World>::getInstance();
+			entity = world.get(name_entity);
+			return true;
+		}
+	}
+	return false;
+}
+
 Game::Game(GameProgram& program, InputHandler& input_handler) : ProgramState(program, input_handler),
 																	  m_theta(0.f),
 																	  m_alpha(0.f),
 																	  m_player_direction(0.f) {
 	World& world = Singleton<World>::getInstance();
-	
+	// Init scripts
+	initScripts();
+	// Add game entities
+	createPlayerEntity(entities);
+	createGroundEntity(entities);
+	createDoorEntity(entities, world);
+
 	/// Set up systems
 	systems.add<MovementSystem>();
 	systems.add<PhysicSystem>(entities, *(world.dynamic_world));
 	systems.add<RenderSystem>(m_viewer);
-	systems.add<ScriptSystem>();
+	systems.add<ScriptSystem>(world.get("player"));
 
 	systems.configure();
 
@@ -294,56 +339,142 @@ Game::Game(GameProgram& program, InputHandler& input_handler) : ProgramState(pro
 		direction_player += glm::vec3(0, 10.f, 0);
 	}));
 
+	std::shared_ptr<ScriptSystem> script_system = systems.system<ScriptSystem>();
 	/// Interaction Key : e 
-	m_commands.insert(std::pair<int, std::function<void()> >(SDLK_e, [&viewer, &input_handler, &ev]() {
-		std::cout << "interaction" << std::endl;
-		bool hit = false;
-		btVector3 intersection_point;
-		const std::string& name_entity = PickingSystem::getPickedEntity(input_handler, *GameProgram::m_current_viewer, hit, intersection_point);
-		if (hit) {
-			btVector3 player_pos(viewer.getPosition().x, viewer.getPosition().y, viewer.getPosition().z);
-			btScalar distance = (player_pos - intersection_point).norm();
-#define DISTANCE_MIN_INTERACTION 3.f
-			if (distance < DISTANCE_MIN_INTERACTION) {
-				World& world = Singleton<World>::getInstance();
-				ev.emit<LaunchEvent>({ world.get(name_entity) });
+	m_commands.insert(std::pair<int, std::function<void()> >(SDLK_e, [&viewer, &input_handler, &ev, script_system]() {
+		entityx::Entity entity;
+		if (isEntityPerInteraction(entity, input_handler, viewer)) {
+			if (!script_system->isRunningScriptFrom(entity)) {
+				ev.emit<LaunchEvent>({ entity, Script::INTERACTION });
+				std::cout << "interaction" << std::endl;
 			}
 		}
 	}));
-
-	// Load the default scene.xml here
-
-	// Init scripts
-	initScripts();
-
-	// Add game entities
-	createPlayerEntity(entities);
-	createGroundEntity(entities);
-	createDoorEntity(entities);
-
-
-	LaunchEvent launch_script = {world.get("door")};
-	events.emit<LaunchEvent>(launch_script);
 }
 
 void Game::initScripts() const {
 	Manager<std::string, std::shared_ptr<FiniteStateMachine>>& scripts = Manager<std::string, std::shared_ptr<FiniteStateMachine>>::getInstance();
+	const Viewer& viewer = m_viewer;
+	const InputHandler& input_handler = m_input_handler;
 
 	/// Open door script
 	FiniteStateMachine::State* door_opening = new FiniteStateMachine::State(
-		[]() {
+		[&viewer](entityx::Entity entity, entityx::Entity player) {
+		entityx::ComponentHandle<Physics> physic = entity.component<Physics>();
+
+		assert(physic->constraint != nullptr);
+		assert(physic->constraint->getConstraintType() == btTypedConstraintType::HINGE_CONSTRAINT_TYPE);
+
+		btHingeConstraint* constraint = (btHingeConstraint*)physic->constraint;
+		
+		btScalar angle = constraint->getHingeAngle();
+		if (angle > constraint->getUpperLimit()*0.95f || angle < constraint->getLowerLimit()*0.95f) {
+			physic->rigid_body->applyTorque(btVector3(0, 0, 0));
+			physic->rigid_body->setAngularVelocity(btVector3(0, 0, 0));
+			physic->rigid_body->setAngularFactor(btVector3(0, 0, 0));
+			return;
+		}
+
+		physic->rigid_body->setAngularFactor(btVector3(0, 1, 0));
+		btScalar start_angle = (constraint->getUpperLimit() + constraint->getLowerLimit()) / 2.f;
+		
+		glm::vec2 door_v(glm::cos(start_angle), -glm::sin(start_angle));
+		glm::vec2 pos_v(viewer.getPosition().x, viewer.getPosition().z);
+		pos_v = glm::normalize(pos_v);
+
+		btScalar torque_y = -20;
+		float sin_theta = pos_v.x * door_v.y - pos_v.y * door_v.x;
+		if (sin_theta < 0.f)
+			torque_y = -torque_y;
+
+		physic->rigid_body->applyTorque(btVector3(0, torque_y, 0));
 		std::cout << "Door opening ! grrrr" << std::endl;
 	});
 
-	/*
-	editorState->addTransition(FiniteStateMachine::Transition(gameState, [&inputHandler, this] {
-		if (inputHandler.m_keydown) {
-			if (inputHandler.m_key.find(SDLK_RETURN) != inputHandler.m_key.end()) {
-				return true;
-			}
+	/// Close door script
+	FiniteStateMachine::State* door_closing = new FiniteStateMachine::State(
+		[&viewer](entityx::Entity entity, entityx::Entity player) {
+		entityx::ComponentHandle<Physics> physic = entity.component<Physics>();
+
+		assert(physic->constraint != nullptr);
+		assert(physic->constraint->getConstraintType() == btTypedConstraintType::HINGE_CONSTRAINT_TYPE);
+
+		btHingeConstraint* constraint = (btHingeConstraint*)physic->constraint;
+
+		btScalar angle = constraint->getHingeAngle();
+		btScalar start_angle = (constraint->getUpperLimit() + constraint->getLowerLimit()) / 2.f;
+
+		if (abs(angle - start_angle) < 0.05f) {
+			physic->rigid_body->applyTorque(btVector3(0, 0, 0));
+			physic->rigid_body->setAngularVelocity(btVector3(0, 0, 0));
+			physic->rigid_body->setAngularFactor(btVector3(0, 0, 0));
+			return;
 		}
-		return false;
-	}));*/
+		physic->rigid_body->setAngularFactor(btVector3(0, 1, 0));
+		
+		bool open_upper_side = (angle > start_angle);
+
+		btScalar torque_y = 20.f;
+		if(open_upper_side)
+			torque_y = -torque_y;
+
+		physic->rigid_body->applyTorque(btVector3(0, torque_y, 0));
+		std::cout << "Door closing ! grrrr" << std::endl;
+	});
+	
+	door_opening->addTransition(FiniteStateMachine::Transition(door_closing,
+		[&input_handler, &viewer](entityx::Entity entity, entityx::Entity player) {
+		if (!input_handler.m_keydown)
+			return false;
+		if (input_handler.m_key.find(SDLK_e) == input_handler.m_key.end())
+			return false;
+		entityx::Entity entity_picked;
+		if (!isEntityPerInteraction(entity_picked, input_handler, viewer))
+			return false;
+		if (entity_picked != entity)
+			return false;
+
+		entityx::ComponentHandle<Physics> physic = entity.component<Physics>();
+
+		assert(physic->constraint != nullptr);
+		assert(physic->constraint->getConstraintType() == btTypedConstraintType::HINGE_CONSTRAINT_TYPE);
+
+		btHingeConstraint* constraint = (btHingeConstraint*)physic->constraint;
+		btScalar angle = constraint->getHingeAngle();
+		if (angle < constraint->getUpperLimit()*0.95f && angle > constraint->getLowerLimit()*0.95f) {
+			return false;
+		}
+
+		return true;
+	}));
+
+	door_closing->addTransition(FiniteStateMachine::Transition(door_opening,
+		[&input_handler, &viewer](entityx::Entity entity, entityx::Entity player) {
+		if (!input_handler.m_keydown)
+			return false;
+		if (input_handler.m_key.find(SDLK_e) == input_handler.m_key.end())
+			return false;
+		entityx::Entity entity_picked;
+		if (!isEntityPerInteraction(entity_picked, input_handler, viewer))
+			return false;
+		if (entity_picked != entity)
+			return false;
+		
+		entityx::ComponentHandle<Physics> physic = entity.component<Physics>();
+
+		assert(physic->constraint != nullptr);
+		assert(physic->constraint->getConstraintType() == btTypedConstraintType::HINGE_CONSTRAINT_TYPE);
+
+		btHingeConstraint* constraint = (btHingeConstraint*)physic->constraint;
+		btScalar angle = constraint->getHingeAngle();
+		btScalar start_angle = (constraint->getUpperLimit() + constraint->getLowerLimit()) / 2.f;
+
+		if (abs(angle - start_angle) > 0.05f) {
+			return false;
+		}
+
+		return true;
+	}));
 
 	scripts.insert("door_opening", std::make_shared<FiniteStateMachine>(door_opening));
 }
@@ -374,9 +505,12 @@ void Game::run() {
 	entityx::Entity player = world.get("player");
 
 	GameProgram::m_current_viewer = &m_viewer;
+
+	/// Systems updates
+	systems.update_all(1.f / 60.f);
+
 	/// Player keyboard callbacks
 	// Reset the direction vector of the player
-
 	m_player_direction = glm::vec3(0.f);
 	this->callbacks();
 
@@ -415,8 +549,7 @@ void Game::run() {
 	//std::cout << physic->rigid_body->getLinearVelocity().x() << " " << physic->rigid_body->getLinearVelocity().y() << " " << physic->rigid_body->getLinearVelocity().z() << std::endl;
 	m_viewer.setPosition(glm::vec3(pos_player.x(), pos_player.y(), pos_player.z()));
 
-	/// Systems updates
-	systems.update_all(1.f/60.f);
+
 
 
 }

@@ -58,6 +58,10 @@ public:
 		if (physic == NULL)
 			return;
 		dynamic_world->addRigidBody(physic->rigid_body);
+		
+		if(physic->constraint != nullptr)
+			dynamic_world->addConstraint(physic->constraint);
+
 		m_entities[name] = entity;
 	}
 
@@ -118,6 +122,10 @@ private:
 		dynamic_world->removeCollisionObject(rigid_body);
 
 		delete physic->collision_shape;
+
+		if (physic->constraint != nullptr) {
+			delete physic->constraint;
+		}
 	}
 public:
 	/// Bullet dynamic world

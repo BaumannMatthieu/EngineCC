@@ -20,6 +20,7 @@ uint16_t GameProgram::height = 1024;
 std::unique_ptr<Editor> GameProgram::editor = nullptr;
 std::unique_ptr<Game> GameProgram::game = nullptr;
 Viewer* GameProgram::m_current_viewer = nullptr;
+GameProgram::State GameProgram::state = GameProgram::GAME;
 
 void SetSDLFlags() {
 	// Request opengl 4.5 context
@@ -110,25 +111,25 @@ GameProgram::GameProgram() : m_font_color(glm::vec4(0.5, 0.5, 0.8, 1.0)),
 	editor = std::make_unique<Editor>(*this, inputHandler);
 	game = std::make_unique<Game>(*this, inputHandler);
 
-	FiniteStateMachine::State* editorState = new FiniteStateMachine::State(
-	[]() {
+	/*FiniteStateMachine::State* editorState = new FiniteStateMachine::State(
+	[](entityx::Entity player, entityx::Entity entity) {
 		GameProgram::editor->run();
 	},
-	[]() {
+	[](entityx::Entity player, entityx::Entity entity) {
 		GameProgram::game->clear();
 		GameProgram::editor->reset();
 	});
 
 	FiniteStateMachine::State* gameState = new FiniteStateMachine::State(
-	[]() {
+	[](entityx::Entity player, entityx::Entity entity) {
 		GameProgram::game->run();
 	},
 		// When the game is launched, we init it by copying all entities from the editor to the game
-	[]() {
+	[](entityx::Entity player, entityx::Entity entity) {
 		GameProgram::game->init(GameProgram::editor->entities);
 	});
 
-	editorState->addTransition(FiniteStateMachine::Transition(gameState, [&inputHandler, this] {
+	editorState->addTransition(FiniteStateMachine::Transition(gameState, [&inputHandler, this](entityx::Entity entity, entityx::Entity player) {
 		if (inputHandler.m_keydown) {
 			if (inputHandler.m_key.find(SDLK_RETURN) != inputHandler.m_key.end()) {
 				return true;
@@ -137,7 +138,7 @@ GameProgram::GameProgram() : m_font_color(glm::vec4(0.5, 0.5, 0.8, 1.0)),
 		return false;
 	}));
 
-	gameState->addTransition(FiniteStateMachine::Transition(editorState, [&inputHandler, this] {
+	gameState->addTransition(FiniteStateMachine::Transition(editorState, [&inputHandler, this](entityx::Entity entity, entityx::Entity player) {
 		if (inputHandler.m_keydown) {
 			if (inputHandler.m_key.find(SDLK_RETURN) != inputHandler.m_key.end()) {
 				return true;
@@ -146,9 +147,10 @@ GameProgram::GameProgram() : m_font_color(glm::vec4(0.5, 0.5, 0.8, 1.0)),
 		return false;
 	}));
 
-	std::unique_ptr<FiniteStateMachine> programStateMachine = std::make_unique<FiniteStateMachine>(gameState);
+	std::unique_ptr<FiniteStateMachine> programStateMachine = std::make_unique<FiniteStateMachine>(gameState);*/
 
 	glEnable(GL_BLEND); glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
 	while (m_run) {
 		glViewport(0, 0, (int)ImGui::GetIO().DisplaySize.x, (int)ImGui::GetIO().DisplaySize.y);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -160,8 +162,27 @@ GameProgram::GameProgram() : m_font_color(glm::vec4(0.5, 0.5, 0.8, 1.0)),
 		ImGui_ImplSdlGL3_NewFrame(m_window);
 		inputHandler.update(event);
 
-		programStateMachine->run();
+		if (GameProgram::state == GameProgram::GAME) {
+			GameProgram::game->run();
+			if (inputHandler.m_keydown) {
+				if (inputHandler.m_key.find(SDLK_RETURN) != inputHandler.m_key.end()) {
+					GameProgram::state = GameProgram::EDITOR;
 
+					GameProgram::game->clear();
+					GameProgram::editor->reset();
+				}
+			}
+		}
+		else if(GameProgram::state == GameProgram::EDITOR) {
+			GameProgram::editor->run();
+			if (inputHandler.m_keydown) {
+				if (inputHandler.m_key.find(SDLK_RETURN) != inputHandler.m_key.end()) {
+					GameProgram::state = GameProgram::GAME;
+
+					GameProgram::game->init(GameProgram::editor->entities);
+				}
+			}
+		}
 		ImGui::Render();
 
 		SDL_GL_SwapWindow(m_window);
