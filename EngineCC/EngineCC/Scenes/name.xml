@@ -1,9 +1,9 @@
 <Root>
     <Name>name</Name>
     <Components>
-        <Render renderable_type="model" filename="C:\Users\Matthieu\source\repos\EngineCC\EngineCC\EngineCC\Content\boblampclean.md5mesh"/>
+        <Render renderable_type="model" filename="C:\Users\Matthieu\source\repos\EngineCC\EngineCC\EngineCC\Content\sword.obj"/>
         <Physics>
-            <mass>2</mass>
+            <mass>3</mass>
             <angular_rotation_disabled>false</angular_rotation_disabled>
         </Physics>
     </Components>

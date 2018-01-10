@@ -62,7 +62,7 @@ private:
 	std::map<entityx::Entity, btVector3> m_move_velocity;
 };
 
-void Game::createPlayerEntity(entityx::EntityManager &es) {
+void Game::createPlayerEntity(entityx::EntityManager &es, World& world) {
 	entityx::Entity entity = es.create();
 
 	// Physics Component
@@ -97,7 +97,13 @@ void Game::createPlayerEntity(entityx::EntityManager &es) {
 	Movable movable(player_speed);
 	entity.assign<Movable>(movable);
 
+	// The player can carry two things at the same time, one entity for its left hand and a second for its right hand
+	Handler handler;
+	handler.left_arm = world.get("sword");
+	entity.assign<Handler>(handler);
+
 	addEntity("player", entity);
+
 }
 
 // Creation of all the in-game entities in Game constructor's class
@@ -106,15 +112,20 @@ void Game::createGroundEntity(entityx::EntityManager &es) {
 
 	// Render Component
 	Manager<std::string, std::shared_ptr<Shader>>& shaders = Manager<std::string, std::shared_ptr<Shader>>::getInstance();
-	std::shared_ptr<Renderable<Plane>> ground_render = std::make_shared<Renderable<Plane>>(shaders.get("simple"));
+	std::shared_ptr<Renderable<Plane>> ground_render = std::make_shared<Renderable<Plane>>(shaders.get("texture"));
+	ground_render->setTexture("C:\\Users\\Matthieu\\Source\\Repos\\EngineCC\\EngineCC\\EngineCC\\Content\\wall3.jpg");
+#define STD_UNIT_PER_TILE 4
+
 	LocalTransform tr;
 	tr.setTranslation(glm::vec3(0, 0, 0));
-	tr.setScale(glm::vec3(1, 0, 1));
+	//tr.setScale(glm::vec3(1, 0, 1));
 	ground_render->setLocalTransform(tr);
 	entity.assign<Render>(ground_render);
 
 	// Physics Component
 	btCollisionShape* ground_shape = new btStaticPlaneShape(btVector3(0, 1, 0), 0);
+	ground_shape->setLocalScaling(btVector3(100, 0, 100));
+	ground_render->setTexcoordsFactor(glm::vec3(100 / STD_UNIT_PER_TILE, 100 / STD_UNIT_PER_TILE, 0));
 	btTransform ground_tr;
 	ground_tr.setIdentity();
 	ground_tr.setOrigin(btVector3(0, 0, 0));
@@ -129,6 +140,7 @@ void Game::createGroundEntity(entityx::EntityManager &es) {
 	btDefaultMotionState* motion_state = new btDefaultMotionState(ground_tr);
 	btRigidBody::btRigidBodyConstructionInfo rbInfo(mass, motion_state, ground_shape, local_inertia);
 	btRigidBody* body = new btRigidBody(rbInfo);
+	
 	body->setFriction(2.f);
 	Physics physics = { ground_shape, motion_state, body, mass, local_inertia, nullptr };
 	entity.assign<Physics>(physics);
@@ -207,6 +219,54 @@ void Game::createDoorEntity(entityx::EntityManager &es, World& world) {
 	addEntity("door", entity);
 }
 
+void Game::createSwordEntity(entityx::EntityManager &es, World& world) {
+	entityx::Entity entity = es.create();
+
+	Manager<std::string, std::shared_ptr<Shader>>& shaders = Manager<std::string, std::shared_ptr<Shader>>::getInstance();
+	std::shared_ptr<Renderable<Model>> arrow_render = std::make_shared<Renderable<Model>>(shaders.get("simple"), "C:\\Users\\Matthieu\\Source\\Repos\\EngineCC\\EngineCC\\EngineCC\\Content\\sword.obj");
+	entity.assign<Render>(arrow_render);
+
+	/// Add physic component
+	// Collision shape computed from the mesh of the entity
+	entityx::ComponentHandle<Render> render = entity.component<Render>();
+	assert(*render != nullptr);
+	std::vector<glm::vec3>& vertices = (*render)->getPrimitive().getVertices();
+
+	btConvexHullShape* entity_shape = new btConvexHullShape();
+	for (int i = 0; i < vertices.size(); ++i) {
+		entity_shape->addPoint(btVector3(vertices[i].x, vertices[i].y, vertices[i].z));
+	}
+	entity_shape->optimizeConvexHull();
+
+	btTransform entity_transform;
+	entity_transform.setIdentity();
+	entity_transform.setOrigin(btVector3(2, 3, 2));
+	//rigidbody is dynamic if and only if mass is non zero, otherwise static
+	float mass = 1.f;
+	bool is_dynamic = (mass != 0.f);
+	btVector3 local_inertia(0, 0, 0);
+	if (is_dynamic)
+		entity_shape->calculateLocalInertia(mass, local_inertia);
+
+	//using motionstate is optional, it provides interpolation capabilities, and only synchronizes 'active' objects
+	btDefaultMotionState* motion_state = new btDefaultMotionState(entity_transform);
+	btRigidBody::btRigidBodyConstructionInfo rbInfo(mass, motion_state, entity_shape, local_inertia);
+	btRigidBody* body = new btRigidBody(rbInfo);
+	// Active rigid body
+	body->setActivationState(DISABLE_DEACTIVATION);
+	//if (data.disable_angular_rotation)
+	//	body->setAngularFactor(0.f);
+
+	Physics physics = { entity_shape, motion_state, body, mass, local_inertia, nullptr };
+	entity.assign<Physics>(physics);
+
+	// A sword is carryable
+	Carryable carryable = { "typical iron sword", "all humans, orks and dwarfs can recognize it ! It's THE sword", true };
+	entity.assign<Carryable>(carryable);
+
+	addEntity("sword", entity);
+}
+
 // Creation of all the in-game entities in Game constructor's class
 void Game::createArrowEntity(entityx::EntityManager &es, entityx::EventManager &events) {
 	entityx::Entity entity = es.create();
@@ -252,9 +312,12 @@ void Game::init(entityx::EntityManager& es_editor) {
 	m_viewer.setPosition(glm::vec3(0, 5, 0));
 	m_viewer.setDirection(glm::vec3(1, 0, 0));
 	
-	createPlayerEntity(entities);
 	createGroundEntity(entities);
 	createDoorEntity(entities, world);
+	createSwordEntity(entities, world);
+
+	// The player is instanciated in last after all other entities/objects have been instanciated;
+	createPlayerEntity(entities, world);
 
 	for (entityx::Entity entity : es_editor.entities_with_components<Render, Physics>()) {
 		entities.create_from_copy(entity);
@@ -298,9 +361,13 @@ Game::Game(GameProgram& program, InputHandler& input_handler) : ProgramState(pro
 	// Init scripts
 	initScripts();
 	// Add game entities
-	createPlayerEntity(entities);
+
 	createGroundEntity(entities);
 	createDoorEntity(entities, world);
+	createSwordEntity(entities, world);
+
+	// The player is instanciated in last after all other entities/objects have been instanciated;
+	createPlayerEntity(entities, world);
 
 	/// Set up systems
 	systems.add<MovementSystem>();
@@ -534,7 +601,6 @@ void Game::run() {
 		}
 	}
 
-
 	// Send an DisplacementEvent of the player entity to the MovementSystem.
 	if (m_player_direction != glm::vec3(0.f)) {
 		// Normalization of the direction of the player
@@ -548,8 +614,4 @@ void Game::run() {
 	const btVector3& pos_player = physic->rigid_body->getCenterOfMassPosition();
 	//std::cout << physic->rigid_body->getLinearVelocity().x() << " " << physic->rigid_body->getLinearVelocity().y() << " " << physic->rigid_body->getLinearVelocity().z() << std::endl;
 	m_viewer.setPosition(glm::vec3(pos_player.x(), pos_player.y(), pos_player.z()));
-
-
-
-
 }

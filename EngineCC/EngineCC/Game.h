@@ -28,8 +28,9 @@ public:
 private:
 	void createGroundEntity(entityx::EntityManager &es);
 	void createDoorEntity(entityx::EntityManager &es, World& world);
-	void createPlayerEntity(entityx::EntityManager &es);
+	void createPlayerEntity(entityx::EntityManager &es, World& world);
 	void createArrowEntity(entityx::EntityManager &es, entityx::EventManager &events);
+	void createSwordEntity(entityx::EntityManager &es, World& world);
 
 	void addEntity(const std::string& name, entityx::Entity entity);
 

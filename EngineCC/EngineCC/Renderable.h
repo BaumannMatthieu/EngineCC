@@ -56,6 +56,8 @@ public:
 	}
 
 	// Renderable construction for a model 3D object a.k.a. Renderable<Model>
+	// TODO : Create a manager of textures map<string, std::shared_ptr<Texture>> instead of creating two times the same
+	// TODO : textures for two instances of the same model.
 	Renderable(const std::weak_ptr<Shader> shader, const std::string& filename) : m_shader(shader) {
 		// Mesh contains all the data of the renderable (vertex, colors, normals, ...)
 		m_render = std::make_unique<T>(filename);

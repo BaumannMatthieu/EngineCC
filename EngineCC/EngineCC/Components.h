@@ -49,11 +49,29 @@ struct Script {
 	// - ATTACK : the player attack the entity. The entity can response by launching a special ATTACK script
 	// that depicts its strategy during the fight
 	// - LOCATION : the script is launched when the player is in a particular location
+	// - INTERACTION_CARRYABLE : the script is launched when the player clic on the mouse. Ths script of the carried entity is launched
+	// This can be a magical spell that do crazy things, instantiate multi entities such as fireballs. This can be the effect of a potion that
+	// can regain life, enhance the speed of the player, allow him to jump higher. In case of non-identified object it could do nasty things on the 
+	// player such as launch a blur shader to disable the view for the player, create instant damage, dots, launch strange shaders (see in black-white)...
 	enum Activation {
 		INTERACTION,
 		ATTACK,
-		LOCATION
+		LOCATION,
+		INTERACTION_CARRYABLE
 	};
 
 	std::map<Activation, std::weak_ptr<FiniteStateMachine>> m_scripts;
+};
+
+struct Carryable {
+	std::string name;
+	std::string description;
+	// Objects that are not dentified can be carried and used but it could affect the user of strange effects.
+	bool identified;
+};
+
+// Entities can be equipped of two weapons, swords, spears, a shield or just a potion
+struct Handler {
+	entityx::Entity left_arm;
+	entityx::Entity right_arm;
 };
