@@ -46,14 +46,17 @@ public:
 	void update(entityx::EntityManager &es, entityx::EventManager &events, entityx::TimeDelta dt) override {
 		es.each<Physics, Movable>([this, &dt](entityx::Entity entity, Physics& physic, Movable& movable) {
 			// Movable entities are stopped until we receive a new MovementEvent. 
-			const btVector3& velocity = physic.rigid_body->getLinearVelocity();
-			physic.rigid_body->setLinearVelocity(btVector3(0, velocity.y(), 0));
+			//const btVector3& velocity = physic.rigid_body->getLinearVelocity();
+			//physic.rigid_body->setLinearVelocity(btVector3(0, velocity.y(), 0));
 			if (m_movements.find(entity) != m_movements.end()) {
 				// If a MovementEvent has been retrieved we set the new linear velocity towards the direction 
 				// defined in the Event and at the speed defined in the MovableComponent
-				btVector3 new_velocity(m_movements[entity].velocity * movable.speed);
+				btVector3 dv(m_movements[entity].direction * movable.speed);
 				
-				physic.rigid_body->setLinearVelocity(new_velocity);
+				//physic.rigid_body->setLinearVelocity(new_velocity);
+				btTransform new_tr = physic.rigid_body->getWorldTransform();
+				new_tr.setOrigin(new_tr.getOrigin() + dv * dt);
+				physic.rigid_body->setWorldTransform(new_tr);
 			}
 		});
 	}
@@ -63,7 +66,8 @@ public:
 		events.subscribe<StopDisplacementEvent>(*this);
 	}
 	void receive(const DisplacementEvent& move) {
-		Movement movement = { btVector3(move.direction.x, 0.f, move.direction.z), 1.0f };
+		Movement movement = { btVector3(move.direction.x, move.direction.y, move.direction.z) };
+		movement.direction.normalize();
 		m_movements[move.entity] = movement;
 	}
 	void receive(const StopDisplacementEvent& stop_move) {
@@ -71,8 +75,7 @@ public:
 	}
 private:
 	struct Movement {
-		btVector3 velocity;
-		float time;
+		btVector3 direction;
 	};
 
 	std::map<entityx::Entity, Movement> m_movements;
@@ -582,6 +585,10 @@ void Game::addEntity(const std::string& name, entityx::Entity entity) {
 }
 
 
+glm::vec3 btVector3ToGlmVec3(const btVector3& vec) {
+	return glm::vec3(vec.x(), vec.y(), vec.z());
+}
+
 void Game::run() {
 
 
@@ -600,11 +607,6 @@ void Game::run() {
 	systems.update<ScriptSystem>(1.f / 60.f);
 	systems.update<PickingSystem>(1.f / 60.f);
 	systems.update<RenderSystem>(1.f / 60.f);
-
-	btTransform player_transform;
-	player.component<Physics>()->motion_state->getWorldTransform(player_transform);
-	glm::vec3 position(player_transform.getOrigin().x(), player_transform.getOrigin().y(), player_transform.getOrigin().z());
-	m_viewer.setPosition(position);
 
 	/// Player keyboard callbacks
 	// Reset the direction vector of the player
@@ -653,5 +655,8 @@ void Game::run() {
 	//btVector3 pos_player = viewer_pos + m_player_direction;
 	//std::cout << physic->rigid_body->getLinearVelocity().x() << " " << physic->rigid_body->getLinearVelocity().y() << " " << physic->rigid_body->getLinearVelocity().z() << std::endl;
 	
+	btTransform player_transform;
+	player_transform = player.component<Physics>()->rigid_body->getCenterOfMassTransform();
 
+	m_viewer.setPosition(btVector3ToGlmVec3(player_transform.getOrigin()));
 }

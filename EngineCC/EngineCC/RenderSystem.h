@@ -35,7 +35,9 @@ public:
 					const btTransform& tr = compound_shape->getChildTransform(1);
 					
 					entityx::ComponentHandle<Render> render_left = handler->left_arm.component<Render>();
-					(*render_left)->setLocalTransform(btTransformToLocalTransform(physic.rigid_body->getWorldTransform() * tr, collision_shape));
+					btTransform handler_tr;
+					physic.motion_state->getWorldTransform(handler_tr);
+					(*render_left)->setLocalTransform(btTransformToLocalTransform(handler_tr * tr, collision_shape));
 				}
 			}
 			else {

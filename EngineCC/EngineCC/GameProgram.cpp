@@ -152,16 +152,14 @@ GameProgram::GameProgram() : m_font_color(glm::vec4(0.5, 0.5, 0.8, 1.0)),
 	glEnable(GL_BLEND); glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
 	while (m_run) {
+		ImGui_ImplSdlGL3_NewFrame(m_window);
+		inputHandler.update(event);
 		glViewport(0, 0, (int)ImGui::GetIO().DisplaySize.x, (int)ImGui::GetIO().DisplaySize.y);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		glClearColor(m_font_color.x,
-					 m_font_color.y,
-					 m_font_color.z,
-					 m_font_color.w);
-
-		ImGui_ImplSdlGL3_NewFrame(m_window);
-		inputHandler.update(event);
-
+			m_font_color.y,
+			m_font_color.z,
+			m_font_color.w);
 		if (GameProgram::state == GameProgram::GAME) {
 			GameProgram::game->run();
 			if (inputHandler.m_keydown) {
@@ -183,8 +181,8 @@ GameProgram::GameProgram() : m_font_color(glm::vec4(0.5, 0.5, 0.8, 1.0)),
 				}
 			}
 		}
-		ImGui::Render();
 
+		ImGui::Render();
 		SDL_GL_SwapWindow(m_window);
 	}
 }
