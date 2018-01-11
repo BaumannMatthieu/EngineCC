@@ -15,6 +15,11 @@
 #include "Shader.h"
 #include "Cube.h"
 
+/// Event for creating movements
+struct EventRotation {
+	entityx::Entity entity;
+};
+
 /// Physic System definition
 class PhysicSystem : public entityx::System<PhysicSystem> {
 public:
@@ -87,7 +92,7 @@ public:
 		BulletDebugDrawer& debug_drawer = Singleton<BulletDebugDrawer>::getInstance();
 		m_dynamic_world.setDebugDrawer(&debug_drawer);
 
-		m_dynamic_world.setGravity(btVector3(0, -10, 0));
+		m_dynamic_world.setGravity(btVector3(0, -10.0, 0));
 	}
 
 	~PhysicSystem() {

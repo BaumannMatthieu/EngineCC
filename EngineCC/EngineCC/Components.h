@@ -1,9 +1,11 @@
 #pragma once
 #include <memory>
+#include <map>
 
 #include "btBulletDynamicsCommon.h"
 #include "Renderable.h"
 #include "FiniteStateMachine.h"
+#include "HierarchicalEntities.h"
 
 /// Component Definitions
 using Render = std::shared_ptr<RenderObject>;
@@ -68,6 +70,9 @@ struct Carryable {
 	std::string description;
 	// Objects that are not dentified can be carried and used but it could affect the user of strange effects.
 	bool identified;
+
+	// Local transform in its parent basis
+	btTransform local_tr;
 };
 
 // Entities can be equipped of two weapons, swords, spears, a shield or just a potion

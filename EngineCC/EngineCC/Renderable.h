@@ -33,6 +33,8 @@ public:
 	virtual const Primitive& getPrimitive() const = 0;
 
 	virtual void draw(const Viewer& viewer) const = 0;
+	
+	virtual void setInvisible(bool visible=false) = 0;
 };
 
 template<typename T>
@@ -82,6 +84,9 @@ public:
 	}
 
 	void draw(const Viewer& viewer) const {
+		if (!m_visible)
+			return;
+
 		if (auto shader_str = m_shader.lock()) {
 			glPolygonMode(GL_FRONT_AND_BACK, m_polygon_mode);
 			shader_str->bind();
@@ -99,6 +104,10 @@ public:
 	void setLocalTransform(const LocalTransform& local_tr) {
 		m_transform = local_tr;
 		m_model_mat = local_tr.getModelMatrix();
+	}
+
+	void setInvisible(bool visible = false) {
+		m_visible = visible;
 	}
 
 	const LocalTransform& getLocalTransform() const {
@@ -122,6 +131,7 @@ private:
 		m_model_mat = glm::mat4(1.f);
 		m_polygon_mode = GL_FILL;
 		m_texcoords_factor = glm::vec3(1);
+		m_visible = true;
 	}
 
 private:
@@ -136,4 +146,6 @@ private:
 
 	// PolygonMode. For bounding boxes
 	GLuint m_polygon_mode;
+
+	bool m_visible;
 };

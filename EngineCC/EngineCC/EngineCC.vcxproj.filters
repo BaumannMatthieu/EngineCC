@@ -91,6 +91,9 @@
     <ClCompile Include="FiniteStateMachine.cpp">
       <Filter>Game</Filter>
     </ClCompile>
+    <ClCompile Include="HierarchicalEntities.cpp">
+      <Filter>Game</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
@@ -180,9 +183,6 @@
     <ClInclude Include="EntityEditionPanel.h">
       <Filter>Game</Filter>
     </ClInclude>
-    <ClInclude Include="PickingSystem.h">
-      <Filter>Game</Filter>
-    </ClInclude>
     <ClInclude Include="Singleton.h">
       <Filter>Utils</Filter>
     </ClInclude>
@@ -215,6 +215,12 @@
     </ClInclude>
     <ClInclude Include="ScriptSystem.h">
       <Filter>Game\Systems</Filter>
+    </ClInclude>
+    <ClInclude Include="PickingSystem.h">
+      <Filter>Game\Systems</Filter>
+    </ClInclude>
+    <ClInclude Include="HierarchicalEntities.h">
+      <Filter>Game</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

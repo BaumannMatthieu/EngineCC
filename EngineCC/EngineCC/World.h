@@ -1,6 +1,7 @@
 #pragma once
 #include <string>
 #include <map>
+#include <algorithm>
 
 #include <entityx/entityx.h>
 #include "btBulletDynamicsCommon.h"
@@ -110,6 +111,13 @@ public:
 		
 		return false;
 	}
+
+	void setGroupMaskCollision(entityx::Entity entity, int group, int mask) {
+		entityx::ComponentHandle<Physics> physic = entity.component<Physics>();
+		dynamic_world->removeCollisionObject(physic->rigid_body);
+		dynamic_world->addRigidBody(physic->rigid_body, group, mask);
+	}
+
 
 private:
 	void removeFromWorld(entityx::Entity entity) {

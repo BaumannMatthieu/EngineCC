@@ -28,6 +28,13 @@ struct DisplacementEvent {
 	glm::vec3 direction;
 };
 
+struct StopDisplacementEvent {
+	StopDisplacementEvent(entityx::Entity entity) : entity(entity) {
+	}
+
+	entityx::Entity entity;
+};
+
 /// System Definitions
 class MovementSystem : public entityx::System<MovementSystem>, public entityx::Receiver<MovementSystem> {
 public:
@@ -41,29 +48,47 @@ public:
 			// Movable entities are stopped until we receive a new MovementEvent. 
 			const btVector3& velocity = physic.rigid_body->getLinearVelocity();
 			physic.rigid_body->setLinearVelocity(btVector3(0, velocity.y(), 0));
-			if (m_move_velocity.find(entity) != m_move_velocity.end()) {
+			if (m_movements.find(entity) != m_movements.end()) {
 				// If a MovementEvent has been retrieved we set the new linear velocity towards the direction 
 				// defined in the Event and at the speed defined in the MovableComponent
-				btVector3 new_velocity(m_move_velocity[entity] * movable.speed);
+				btVector3 new_velocity(m_movements[entity].velocity * movable.speed);
+				
 				physic.rigid_body->setLinearVelocity(new_velocity);
-				m_move_velocity.erase(entity);
 			}
 		});
-
 	}
 
 	void configure(entityx::EventManager &events) override {
 		events.subscribe<DisplacementEvent>(*this);
+		events.subscribe<StopDisplacementEvent>(*this);
 	}
 	void receive(const DisplacementEvent& move) {
-		m_move_velocity.insert(std::pair<entityx::Entity, btVector3>(move.entity, btVector3(move.direction.x, 0.f, move.direction.z)));
+		Movement movement = { btVector3(move.direction.x, 0.f, move.direction.z), 1.0f };
+		m_movements[move.entity] = movement;
+	}
+	void receive(const StopDisplacementEvent& stop_move) {
+		m_movements.erase(stop_move.entity);
 	}
 private:
-	std::map<entityx::Entity, btVector3> m_move_velocity;
+	struct Movement {
+		btVector3 velocity;
+		float time;
+	};
+
+	std::map<entityx::Entity, Movement> m_movements;
 };
 
 void Game::createPlayerEntity(entityx::EntityManager &es, World& world) {
 	entityx::Entity entity = es.create();
+
+	// Render Component
+	Manager<std::string, std::shared_ptr<Shader>>& shaders = Manager<std::string, std::shared_ptr<Shader>>::getInstance();
+	std::shared_ptr<Renderable<Cube>> ground_render = std::make_shared<Renderable<Cube>>(shaders.get("simple"));
+
+	LocalTransform tr;
+	ground_render->setLocalTransform(tr);
+	ground_render->setInvisible();
+	entity.assign<Render>(ground_render);
 
 	// Physics Component
 	glm::vec3 size_box(1.5f, 2.5f, 1.5f);
@@ -74,14 +99,18 @@ void Game::createPlayerEntity(entityx::EntityManager &es, World& world) {
 	entity_tr.setOrigin(btVector3(m_viewer.getPosition().x, m_viewer.getPosition().y, m_viewer.getPosition().z));
 	btScalar mass(1.f);
 	//rigidbody is dynamic if and only if mass is non zero, otherwise static
+
+	btCompoundShape* compound = new btCompoundShape();
+	compound->addChildShape(btTransform::getIdentity(), entity_shape);
+
 	bool is_dynamic = (mass != 0.f);
 	btVector3 local_inertia(0, 0, 0);
 	if (is_dynamic)
-		entity_shape->calculateLocalInertia(mass, local_inertia);
+		compound->calculateLocalInertia(mass, local_inertia);
 
 	//using motionstate is optional, it provides interpolation capabilities, and only synchronizes 'active' objects
 	btDefaultMotionState* motion_state = new btDefaultMotionState(entity_tr);
-	btRigidBody::btRigidBodyConstructionInfo rbInfo(mass, motion_state, entity_shape, local_inertia);
+	btRigidBody::btRigidBodyConstructionInfo rbInfo(mass, motion_state, compound, local_inertia);
 	btRigidBody* body = new btRigidBody(rbInfo);
 	// Active rigid body
 	body->setActivationState(DISABLE_DEACTIVATION);
@@ -89,7 +118,7 @@ void Game::createPlayerEntity(entityx::EntityManager &es, World& world) {
 	// Disable angular rotation when hitting another body
 	body->setAngularFactor(0);
 
-	Physics physics = { entity_shape, motion_state, body, mass, local_inertia, nullptr };
+	Physics physics = { compound, motion_state, body, mass, local_inertia, nullptr };
 	entity.assign<Physics>(physics);
 
 	// Movable Component
@@ -99,11 +128,9 @@ void Game::createPlayerEntity(entityx::EntityManager &es, World& world) {
 
 	// The player can carry two things at the same time, one entity for its left hand and a second for its right hand
 	Handler handler;
-	handler.left_arm = world.get("sword");
 	entity.assign<Handler>(handler);
 
 	addEntity("player", entity);
-
 }
 
 // Creation of all the in-game entities in Game constructor's class
@@ -219,7 +246,7 @@ void Game::createDoorEntity(entityx::EntityManager &es, World& world) {
 	addEntity("door", entity);
 }
 
-void Game::createSwordEntity(entityx::EntityManager &es, World& world) {
+void Game::createSwordEntity(const std::string& name, entityx::EntityManager &es, World& world) {
 	entityx::Entity entity = es.create();
 
 	Manager<std::string, std::shared_ptr<Shader>>& shaders = Manager<std::string, std::shared_ptr<Shader>>::getInstance();
@@ -261,10 +288,14 @@ void Game::createSwordEntity(entityx::EntityManager &es, World& world) {
 	entity.assign<Physics>(physics);
 
 	// A sword is carryable
-	Carryable carryable = { "typical iron sword", "all humans, orks and dwarfs can recognize it ! It's THE sword", true };
+	btTransform local_transform;
+	local_transform.setIdentity();
+	local_transform.setOrigin(btVector3(0.3f, -0.5f, -0.5f));
+	local_transform.setRotation(btQuaternion(0, M_PI / 2.f, 0));
+	Carryable carryable = { "typical iron sword", "all humans, orks and dwarfs can recognize it ! It's THE sword", true, local_transform };
 	entity.assign<Carryable>(carryable);
 
-	addEntity("sword", entity);
+	addEntity(name, entity);
 }
 
 // Creation of all the in-game entities in Game constructor's class
@@ -314,7 +345,8 @@ void Game::init(entityx::EntityManager& es_editor) {
 	
 	createGroundEntity(entities);
 	createDoorEntity(entities, world);
-	createSwordEntity(entities, world);
+	createSwordEntity("sword", entities, world);
+	createSwordEntity("sword2", entities, world);
 
 	// The player is instanciated in last after all other entities/objects have been instanciated;
 	createPlayerEntity(entities, world);
@@ -334,24 +366,7 @@ void Game::clear() {
 	m_game_entity_names.clear();
 }
 
-// Returns true if picked entity is at a minimal distance of interaction. Returns false otherwise (no picked entity or
-// too far).
-bool isEntityPerInteraction(entityx::Entity& entity, const InputHandler& input_handler, const Viewer& viewer) {
-	bool hit = false;
-	btVector3 intersection_point;
-	const std::string& name_entity = PickingSystem::getPickedEntity(input_handler, *GameProgram::m_current_viewer, hit, intersection_point);
-	if (hit) {
-		btVector3 player_pos(viewer.getPosition().x, viewer.getPosition().y, viewer.getPosition().z);
-		btScalar distance = (player_pos - intersection_point).norm();
-#define DISTANCE_MIN_INTERACTION 10.f
-		if (distance < DISTANCE_MIN_INTERACTION) {
-			World& world = Singleton<World>::getInstance();
-			entity = world.get(name_entity);
-			return true;
-		}
-	}
-	return false;
-}
+
 
 Game::Game(GameProgram& program, InputHandler& input_handler) : ProgramState(program, input_handler),
 																	  m_theta(0.f),
@@ -364,16 +379,18 @@ Game::Game(GameProgram& program, InputHandler& input_handler) : ProgramState(pro
 
 	createGroundEntity(entities);
 	createDoorEntity(entities, world);
-	createSwordEntity(entities, world);
+	createSwordEntity("sword", entities, world);
+	createSwordEntity("sword2", entities, world);
 
 	// The player is instanciated in last after all other entities/objects have been instanciated;
 	createPlayerEntity(entities, world);
 
 	/// Set up systems
-	systems.add<MovementSystem>();
 	systems.add<PhysicSystem>(entities, *(world.dynamic_world));
-	systems.add<RenderSystem>(m_viewer);
+	systems.add<MovementSystem>();
 	systems.add<ScriptSystem>(world.get("player"));
+	systems.add<PickingSystem>(m_viewer, m_input_handler, world.get("player"));
+	systems.add<RenderSystem>(m_viewer);
 
 	systems.configure();
 
@@ -402,20 +419,12 @@ Game::Game(GameProgram& program, InputHandler& input_handler) : ProgramState(pro
 	}));
 
 	m_commands.insert(std::pair<int, std::function<void()> >(SDLK_SPACE, [&viewer, &direction_player]() {
-		std::cout << "jump" << std::endl;
 		direction_player += glm::vec3(0, 10.f, 0);
 	}));
 
-	std::shared_ptr<ScriptSystem> script_system = systems.system<ScriptSystem>();
 	/// Interaction Key : e 
-	m_commands.insert(std::pair<int, std::function<void()> >(SDLK_e, [&viewer, &input_handler, &ev, script_system]() {
-		entityx::Entity entity;
-		if (isEntityPerInteraction(entity, input_handler, viewer)) {
-			if (!script_system->isRunningScriptFrom(entity)) {
-				ev.emit<LaunchEvent>({ entity, Script::INTERACTION });
-				std::cout << "interaction" << std::endl;
-			}
-		}
+	m_commands.insert(std::pair<int, std::function<void()> >(SDLK_e, [&ev, &world]() {
+		ev.emit<InteractionEvent>({world.get("player")});
 	}));
 }
 
@@ -496,7 +505,7 @@ void Game::initScripts() const {
 		if (input_handler.m_key.find(SDLK_e) == input_handler.m_key.end())
 			return false;
 		entityx::Entity entity_picked;
-		if (!isEntityPerInteraction(entity_picked, input_handler, viewer))
+		if (!PickingSystem::isEntityPerInteraction(entity_picked, input_handler, viewer))
 			return false;
 		if (entity_picked != entity)
 			return false;
@@ -522,7 +531,7 @@ void Game::initScripts() const {
 		if (input_handler.m_key.find(SDLK_e) == input_handler.m_key.end())
 			return false;
 		entityx::Entity entity_picked;
-		if (!isEntityPerInteraction(entity_picked, input_handler, viewer))
+		if (!PickingSystem::isEntityPerInteraction(entity_picked, input_handler, viewer))
 			return false;
 		if (entity_picked != entity)
 			return false;
@@ -542,6 +551,13 @@ void Game::initScripts() const {
 
 		return true;
 	}));
+
+	/// Interaction script for picked objects
+	FiniteStateMachine::State* picking = new FiniteStateMachine::State(
+		[&viewer](entityx::Entity entity, entityx::Entity player) {
+		entityx::ComponentHandle<Physics> physic = entity.component<Physics>();
+		
+	});
 
 	scripts.insert("door_opening", std::make_shared<FiniteStateMachine>(door_opening));
 }
@@ -567,14 +583,28 @@ void Game::addEntity(const std::string& name, entityx::Entity entity) {
 
 
 void Game::run() {
+
+
 	// Get a reference to the world
 	World& world = Singleton<World>::getInstance();
 	entityx::Entity player = world.get("player");
 
+
 	GameProgram::m_current_viewer = &m_viewer;
 
 	/// Systems updates
-	systems.update_all(1.f / 60.f);
+	//systems.update_all(1.f / 60.f);
+
+	systems.update<PhysicSystem>(1.f / 60.f);
+	systems.update<MovementSystem>(1.f / 60.f);
+	systems.update<ScriptSystem>(1.f / 60.f);
+	systems.update<PickingSystem>(1.f / 60.f);
+	systems.update<RenderSystem>(1.f / 60.f);
+
+	btTransform player_transform;
+	player.component<Physics>()->motion_state->getWorldTransform(player_transform);
+	glm::vec3 position(player_transform.getOrigin().x(), player_transform.getOrigin().y(), player_transform.getOrigin().z());
+	m_viewer.setPosition(position);
 
 	/// Player keyboard callbacks
 	// Reset the direction vector of the player
@@ -598,6 +628,12 @@ void Game::run() {
 			m_viewer.setDirection(glm::vec3(glm::sin(m_alpha)*glm::cos(m_theta),
 				glm::sin(m_theta),
 				-glm::cos(m_alpha)*glm::cos(m_theta)));
+			
+			btTransform tr = player.component<Physics>()->rigid_body->getWorldTransform();
+			//tr.setIdentity();
+			tr.setRotation(btQuaternion(-m_alpha, 0, 0));
+			player.component<Physics>()->rigid_body->setWorldTransform(tr);
+
 		}
 	}
 
@@ -605,13 +641,17 @@ void Game::run() {
 	if (m_player_direction != glm::vec3(0.f)) {
 		// Normalization of the direction of the player
 		glm::normalize(m_player_direction);
-
 		events.emit<DisplacementEvent>(player, m_player_direction);
+	}
+	else {
+		events.emit<StopDisplacementEvent>(player);
 	}
 
 	/// Set viewer on the player position
 	entityx::ComponentHandle<Physics> physic = player.component<Physics>();
-	const btVector3& pos_player = physic->rigid_body->getCenterOfMassPosition();
+	//btVector3 viewer_pos(m_viewer.getPosition().x, m_viewer.getPosition().y, m_viewer.getPosition().z);
+	//btVector3 pos_player = viewer_pos + m_player_direction;
 	//std::cout << physic->rigid_body->getLinearVelocity().x() << " " << physic->rigid_body->getLinearVelocity().y() << " " << physic->rigid_body->getLinearVelocity().z() << std::endl;
-	m_viewer.setPosition(glm::vec3(pos_player.x(), pos_player.y(), pos_player.z()));
+	
+
 }
