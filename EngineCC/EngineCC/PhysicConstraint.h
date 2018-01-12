@@ -32,7 +32,6 @@ public:
 	PhysicHingeConstraint(btRigidBody* body,
 		const btVector3& axis,
 		const btVector3& pivot,
-		const btVector3& torque,
 		btScalar lower_limit,
 		btScalar upper_limit);
 
@@ -56,7 +55,7 @@ public:
 		return m_start_angle;
 	}
 
-	void startImpulse(btScalar to_angle);
+	void startImpulse(btScalar offset_angle, const btVector3& torque_abs);
 	void restart();
 	void update();
 

@@ -3,9 +3,8 @@
 
 PhysicHingeConstraint::PhysicHingeConstraint(btRigidBody* body, const btVector3& axis,
 	const btVector3& pivot,
-	const btVector3& torque,
 	btScalar lower_limit,
-	btScalar upper_limit) : PhysicConstraint(body), m_torque(torque) {
+	btScalar upper_limit) : PhysicConstraint(body) {
 	m_constraint = new btHingeConstraint(*body, pivot, axis);
 	m_start_angle = m_constraint->getHingeAngle();
 	m_constraint->setLimit(lower_limit, upper_limit);
@@ -13,19 +12,19 @@ PhysicHingeConstraint::PhysicHingeConstraint(btRigidBody* body, const btVector3&
 	m_constraint->setDbgDrawSize(btScalar(5.f));
 }
 
-void PhysicHingeConstraint::startImpulse(btScalar to_angle) {
+void PhysicHingeConstraint::startImpulse(btScalar offset_angle, const btVector3& torque_abs) {
 	m_from_angle = m_constraint->getHingeAngle();
-	
-	m_to_angle = to_angle;
-	assert(m_from_angle >= m_constraint->getLowerLimit() && to_angle <= m_constraint->getUpperLimit());
+	m_to_angle = offset_angle + m_from_angle;
+	m_torque = torque_abs;
+	assert(m_from_angle >= m_constraint->getLowerLimit() && m_to_angle <= m_constraint->getUpperLimit());
 
-	const btVector3& torque = (m_to_angle >= m_from_angle) ? m_torque : -m_torque;
+	const btVector3& torque = (m_to_angle >= m_from_angle) ? torque_abs : -torque_abs;
 	m_body->applyTorque(torque);
 	m_finished = false;
 }
 
 void PhysicHingeConstraint::restart() {
-	startImpulse(m_to_angle);
+	startImpulse(m_to_angle, m_torque);
 }
 
 void PhysicHingeConstraint::update() {

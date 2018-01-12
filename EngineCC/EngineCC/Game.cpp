@@ -175,7 +175,6 @@ void Game::createDoorEntity(entityx::EntityManager &es, World& world) {
 	// Add hinge constraint
 	btVector3 pivot(-length / 2.f, 0, 0);
 	btVector3 axis(0, 1, 0);
-	btVector3 torque(0, 80, 0);
 
 	Physics physics = { entity_shape, motion_state, body, mass, local_inertia};
 	//physics.constraints["pivot"] = new PhysicHingeConstraint(body, axis, pivot, torque, angle - M_PI * 0.5, angle + M_PI * 0.5);
@@ -193,7 +192,7 @@ void Game::createDoorEntity(entityx::EntityManager &es, World& world) {
 	// Add of a hinge constraint of axis Y
 	events.emit<AddConstraint>(AddConstraint(entity,
 		"pivotY",
-		new PhysicHingeConstraint(body, axis, pivot, torque, angle - M_PI * 0.5, angle + M_PI * 0.5)));
+		new PhysicHingeConstraint(body, axis, pivot, angle - M_PI * 0.5, angle + M_PI * 0.5)));
 }
 
 void Game::createSwordEntity(const std::string& name, entityx::EntityManager &es, World& world) {
@@ -406,7 +405,7 @@ void Game::initScripts() {
 		[&ev](entityx::Entity entity, entityx::Entity player) {
 		std::cout << "Step 2 : Push the door in + sense" << std::endl;
 
-		ev.emit<StartImpulseHinge>(StartImpulseHinge(entity, "pivotY", 3 * M_PI / 4));
+		ev.emit<StartImpulseHinge>(StartImpulseHinge(entity, "pivotY", M_PI / 4, btVector3(0, 80, 0)));
 	});
 
 	FiniteStateMachine::State* door_pull_plus = new FiniteStateMachine::State(
@@ -414,7 +413,7 @@ void Game::initScripts() {
 		[&ev](entityx::Entity entity, entityx::Entity player) {
 		std::cout << "Step 3 : Pull the door in + sense" << std::endl;
 
-		ev.emit<StartImpulseHinge>(StartImpulseHinge(entity, "pivotY", 0));
+		ev.emit<StartImpulseHinge>(StartImpulseHinge(entity, "pivotY", -M_PI / 4, btVector3(0, 80, 0)));
 	});
 
 	FiniteStateMachine::State* door_push_minus = new FiniteStateMachine::State(
@@ -422,7 +421,7 @@ void Game::initScripts() {
 		[&ev](entityx::Entity entity, entityx::Entity player) {
 		std::cout << "Step 4 : Push the door in - sense" << std::endl;
 
-		ev.emit<StartImpulseHinge>(StartImpulseHinge(entity, "pivotY", -M_PI / 4));
+		ev.emit<StartImpulseHinge>(StartImpulseHinge(entity, "pivotY", -M_PI / 4, btVector3(0, 80, 0)));
 	});
 
 	FiniteStateMachine::State* door_pull_minus = new FiniteStateMachine::State(
@@ -430,11 +429,11 @@ void Game::initScripts() {
 		[&ev](entityx::Entity entity, entityx::Entity player) {
 		std::cout << "Step 5 : Pull the door in - sense" << std::endl;
 
-		ev.emit<StartImpulseHinge>(StartImpulseHinge(entity, "pivotY", 0));
+		ev.emit<StartImpulseHinge>(StartImpulseHinge(entity, "pivotY", M_PI / 4, btVector3(0, 80, 0)));
 	});
 	
 	door_opening_start->addTransition(FiniteStateMachine::Transition(door_push_plus,
-		[&input_handler, &viewer](entityx::Entity entity, entityx::Entity player) {
+		[&input_handler, &viewer, pPhysicConstraintSystem](entityx::Entity entity, entityx::Entity player) {
 		entityx::Entity entity_picked;
 		if (!PickingSystem::isEntityPerInteraction(entity_picked, input_handler, viewer))
 			return false;
@@ -446,7 +445,8 @@ void Game::initScripts() {
 		std::cout << "1 -> 2" << std::endl;
 		assert(pivot != nullptr);
 		btScalar start_angle = (pivot->() + pivot->getLowerLimitAngle()) / 2.f;*/
-		btScalar start_angle = M_PI / 4;
+
+		btScalar start_angle = pPhysicConstraintSystem->getStartAngle(entity, "pivotY");
 		glm::vec2 door_v(glm::cos(start_angle), -glm::sin(start_angle));
 		glm::vec2 pos_v(viewer.getPosition().x, viewer.getPosition().z);
 		pos_v = glm::normalize(pos_v);
@@ -456,7 +456,7 @@ void Game::initScripts() {
 	}));
 
 	door_opening_start->addTransition(FiniteStateMachine::Transition(door_push_minus,
-		[&input_handler, &viewer](entityx::Entity entity, entityx::Entity player) {
+		[&input_handler, &viewer, pPhysicConstraintSystem](entityx::Entity entity, entityx::Entity player) {
 		entityx::Entity entity_picked;
 		if (!PickingSystem::isEntityPerInteraction(entity_picked, input_handler, viewer))
 			return false;
@@ -468,7 +468,7 @@ void Game::initScripts() {
 		std::cout << "1 -> 4" << std::endl;
 		assert(pivot != nullptr);
 		btScalar start_angle = (pivot->getUpperLimitAngle() + pivot->getLowerLimitAngle()) / 2.f;*/
-		btScalar start_angle = M_PI / 4;
+		btScalar start_angle = pPhysicConstraintSystem->getStartAngle(entity, "pivotY");
 		glm::vec2 door_v(glm::cos(start_angle), -glm::sin(start_angle));
 		glm::vec2 pos_v(viewer.getPosition().x, viewer.getPosition().z);
 		pos_v = glm::normalize(pos_v);

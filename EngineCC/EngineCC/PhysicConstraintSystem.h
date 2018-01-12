@@ -7,32 +7,35 @@
 #include "World.h"
 #include "Singleton.h"
 
+using namespace std;
+using namespace entityx;
+
 /// AddConstraint event
 struct AddConstraint {
-	AddConstraint(entityx::Entity constrained_entity, const std::string& constraint_name, PhysicConstraint* pConstraint) :
+	AddConstraint(Entity constrained_entity, const string& constraint_name, PhysicConstraint* pConstraint) :
 		constrained_entity(constrained_entity), constraint_name(constraint_name), pConstraint(pConstraint) {
 	}
 
-	entityx::Entity constrained_entity;
-	std::string constraint_name;
+	Entity constrained_entity;
+	string constraint_name;
 	PhysicConstraint* pConstraint;
 };
 
 struct StartImpulseHinge {
-	StartImpulseHinge(entityx::Entity constrained_entity, const std::string& constraint_name, btScalar to_angle) :
-		constrained_entity(constrained_entity), constraint_name(constraint_name), to_angle(to_angle) {
+	StartImpulseHinge(Entity constrained_entity, const string& constraint_name, btScalar angle_offset, const btVector3& torque) :
+		constrained_entity(constrained_entity), constraint_name(constraint_name), angle_offset(angle_offset), torque(torque) {
 	}
 
-	entityx::Entity constrained_entity;
-	std::string constraint_name;
+	Entity constrained_entity;
+	string constraint_name;
 
-	btScalar to_angle;
+	btScalar angle_offset;
+	btVector3 torque;
 };
 struct StartImpulseSlider;
 struct StartImpulsePoint2point;
 
-using namespace std;
-using namespace entityx;
+
 
 /// AttackSystem definifion
 class PhysicConstraintSystem : public System<PhysicConstraintSystem>, public Receiver<PhysicConstraintSystem> {
@@ -49,7 +52,6 @@ public:
 	}
 
 	void receive(const AddConstraint &event) {
-		std::cout << m_world_constraints.size() << std::endl;
 		addConstraint(m_world_constraints[event.constrained_entity], event.constraint_name, event.pConstraint);
 	}
 
@@ -58,15 +60,14 @@ public:
 		// We assert that the constraint name refers to a hinge constraint
 		assert(constraint_name.find("pivot") != string::npos);
 
-		entityx::Entity entity_to_impulse = event.constrained_entity;
+		Entity entity_to_impulse = event.constrained_entity;
 		// We assert the constraint exists
-		std::cout << m_world_constraints.size() << std::endl;
 		assert(isConstraintExists(m_world_constraints[entity_to_impulse], constraint_name));
 		
 		PhysicConstraint* pConstraint = m_world_constraints[entity_to_impulse][constraint_name];
 		// The constraint exists and is of hinge type, we can cast it
 		PhysicHingeConstraint* pHingeConstraint = (PhysicHingeConstraint*)pConstraint;
-		pHingeConstraint->startImpulse(event.to_angle);
+		pHingeConstraint->startImpulse(event.angle_offset, event.torque);
 	}
 
 	// Add a new constraint to the world
@@ -110,6 +111,18 @@ public:
 		PhysicConstraint* pConstraint = m_world_constraints[entity][constraint_name];
 		
 		return pConstraint->isFinished();
+	}
+
+	btScalar getStartAngle(Entity entity, const string& constraint_name) {
+		// We assert the constraint exists
+		assert(isConstraintExists(m_world_constraints[entity], constraint_name));
+		PhysicConstraint* pConstraint = m_world_constraints[entity][constraint_name];
+
+		// We assert the constraint is of hinge type
+		assert(constraint_name.find("pivot") != string::npos);
+		PhysicHingeConstraint* pHingeConstraint = (PhysicHingeConstraint*)pConstraint;
+
+		return pHingeConstraint->getStartAngle();
 	}
 
 private:
