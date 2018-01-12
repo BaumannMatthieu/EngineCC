@@ -16,6 +16,8 @@ struct LaunchEvent {
 class ScriptSystem : public entityx::System<ScriptSystem>, public entityx::Receiver<ScriptSystem> {
 public:
 	ScriptSystem(entityx::Entity player) : player(player) {
+		// Scripts definition
+		
 	}
 
 	void configure(entityx::EventManager &event_manager) {
@@ -34,16 +36,18 @@ public:
 	}
 
 	void update(entityx::EntityManager &es, entityx::EventManager &events, entityx::TimeDelta dt) override {
+		ScriptManager& scripts = ScriptManager::getInstance();
 		for (std::map<entityx::Entity, Script::Activation>::iterator it = m_scripts.begin(); it != m_scripts.end(); ++it) {
 			entityx::Entity entity = it->first;
 			Script::Activation type = it->second;
 			// Precondition : receive method assert that all entities in m_scripts have a script component
 			entityx::ComponentHandle<Script> component = entity.component<Script>();
-			if (auto script = component->m_scripts[type].lock()) {
-				if (script->run(entity, player)) {
-					it = m_scripts.erase(it);
-				}
+			const std::string& script_name = component->m_scripts[type];
+			FiniteStateMachinePtr script = scripts.get(script_name);
+			if (script->run(entity, player)) {
+				it = m_scripts.erase(it);
 			}
+			
 			if (m_scripts.empty())
 				break;
 		}

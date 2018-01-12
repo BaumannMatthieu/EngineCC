@@ -5,8 +5,8 @@
 
 class PhysicConstraint {
 public:
-	PhysicConstraint(entityx::Entity entity) : m_entity(entity), m_finished(false) {
-		assert(entity.valid());
+	PhysicConstraint(btRigidBody* body) : m_body(body),
+										  m_finished(false) {
 	}
 
 	virtual ~PhysicConstraint() {
@@ -22,12 +22,15 @@ public:
 
 protected:
 	bool m_finished;
-	entityx::Entity m_entity;
+	btRigidBody* m_body;
 };
+
+struct Physics;
 
 class PhysicHingeConstraint : public PhysicConstraint {
 public:
-	PhysicHingeConstraint(entityx::Entity entity, btVector3& axis,
+	PhysicHingeConstraint(btRigidBody* body,
+		const btVector3& axis,
 		const btVector3& pivot,
 		const btVector3& torque,
 		btScalar lower_limit,
@@ -49,7 +52,11 @@ public:
 		return m_constraint->getLowerLimit();
 	}
 
-	void start(btScalar from_angle, btScalar to_angle);
+	btScalar getStartAngle() const {
+		return m_start_angle;
+	}
+
+	void startImpulse(btScalar to_angle);
 	void restart();
 	void update();
 
@@ -57,6 +64,7 @@ private:
 	btVector3 m_torque;
 	btScalar m_from_angle;
 	btScalar m_to_angle;
+	btScalar m_start_angle;
 
 	btHingeConstraint* m_constraint;
 };

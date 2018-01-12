@@ -39,13 +39,6 @@ public:
 	//// dynamicsWorld->debugDrawWorld();
 	class BulletDebugDrawer : public btIDebugDraw {
 	public:
-		/*void SetMatrices(const glm::mat4& pViewMatrix, const glm::mat4& pProjectionMatrix){
-		glUseProgram(0); // Use Fixed-function pipeline (no shaders)
-		glMatrixMode(GL_MODELVIEW);
-		glLoadMatrixf(&pViewMatrix[0][0]);
-		glMatrixMode(GL_PROJECTION);
-		glLoadMatrixf(&pProjectionMatrix[0][0]);
-		}*/
 
 		virtual void drawLine(const btVector3& from, const btVector3& to, const btVector3& color) {
 			glm::vec3 from_glm(from.x(), from.y(), from.z());
@@ -84,7 +77,7 @@ public:
 		std::vector<glm::vec3> m_points;
 		std::vector<glm::vec4> m_colors;
 	};
-public:
+public: 
 	// Receive entities so that we add them to the dynamic world
 	// entities that will be instanciated during the game will be send
 	// to the PhysicSystem by a special event that will add them too.
@@ -101,11 +94,11 @@ public:
 
 	void update(entityx::EntityManager &es, entityx::EventManager &events, entityx::TimeDelta dt) override {
 		// Update the constraints
-		es.each<Physics>([](entityx::Entity entity, Physics& physics) {
+		/*es.each<Physics>([](entityx::Entity entity, Physics& physics) {
 			for (std::map<std::string, PhysicConstraint*>::iterator it = physics.constraints.begin(); it != physics.constraints.end(); ++it) {
 				it->second->update();
 			}
-		});
+		});*/
 
 		m_dynamic_world.stepSimulation(dt);
 

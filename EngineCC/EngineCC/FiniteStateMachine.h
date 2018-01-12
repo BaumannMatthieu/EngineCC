@@ -37,3 +37,5 @@ private:
 	const State* m_root;
 	const State* m_current;
 };
+
+using FiniteStateMachinePtr = std::shared_ptr<FiniteStateMachine>;

@@ -231,5 +231,14 @@
     <ClInclude Include="PhysicConstraint.h">
       <Filter>Game\Systems\PhysicSystem</Filter>
     </ClInclude>
+    <ClInclude Include="AttackSystem.h">
+      <Filter>Game\Systems</Filter>
+    </ClInclude>
+    <ClInclude Include="PhysicConstraintSystem.h">
+      <Filter>Game\Systems\PhysicSystem</Filter>
+    </ClInclude>
+    <ClInclude Include="MovementSystem.h">
+      <Filter>Game\Systems</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

@@ -20,6 +20,7 @@ public:
 
 	void receive(const InteractionEvent &event) {
 		entityx::Entity entity;
+		// TODO : allow other handling entities than player to pick a carryable entity
 		if (isEntityPerInteraction(entity, m_input_handler, m_viewer)) {
 			std::weak_ptr<ScriptSystem> script_system = GameProgram::game->systems.system<ScriptSystem>();
 			entityx::EventManager& ev = GameProgram::game->events;
@@ -33,7 +34,6 @@ public:
 			if (entity.component<Carryable>()) {
 				const btTransform& local_transform = entity.component<Carryable>()->local_tr;
 
-				// TODO : exploit event.entity_emitting instead of the player
 				World& world = Singleton<World>::getInstance();
 				entityx::ComponentHandle<Handler> player_handler = m_player.component<Handler>();
 				entityx::ComponentHandle<Physics> player_physics = m_player.component<Physics>();
@@ -66,18 +66,6 @@ public:
 	}
 
 	void update(entityx::EntityManager &es, entityx::EventManager &events, entityx::TimeDelta dt) override {
-		
-		/*es.each<Carryable, Physics>([this](entityx::Entity entity, Carryable& handler, Physics& physic) {
-			entityx::ComponentHandle<Physics> physics = m_player.component<Physics>();
-			btCompoundShape* player_compound_shape = (btCompoundShape*)physics->collision_shape;
-
-			entity.component<Physics>()->rigid_body->setWorldTransform(player_compound_shape->getChildTransform(0));
-			//handler.root->setLocalTransform(physic.rigid_body->getWorldTransform());
-			//handler.root->computeTransformHierarchy();
-
-			World& world = Singleton<World>::getInstance();
-			world.dynamic_world->updateAabbs();
-		});*/
 	}
 	
 	// Returns true if picked entity is at a minimal distance of interaction. Returns false otherwise (no picked entity or

@@ -51,3 +51,5 @@ template<typename K, typename T>
 const std::map<K, T>& Manager<K, T>::getRessources() const {
 	return m_ressources;
 }
+
+using ScriptManager = Manager<std::string, FiniteStateMachinePtr>;

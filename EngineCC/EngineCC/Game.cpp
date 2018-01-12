@@ -14,74 +14,17 @@
 #include "PhysicSystem.h"
 #include "ScriptSystem.h"
 #include "PickingSystem.h"
+#include "AttackSystem.h"
+#include "PhysicConstraintSystem.h"
+#include "MovementSystem.h"
 
 #include <entityx/entityx.h>
 #include <glm/gtx/vector_angle.hpp>
 
-/// Event Definitions
-struct DisplacementEvent {
-	DisplacementEvent(entityx::Entity entity, const glm::vec3& direction) : entity(entity),
-																			direction(direction) {
-	}
-	// The entity to move
-	entityx::Entity entity;
-	glm::vec3 direction;
-};
+template<typename T>
+using SystemPtr = std::shared_ptr<entityx::System<T>>;
 
-struct StopDisplacementEvent {
-	StopDisplacementEvent(entityx::Entity entity) : entity(entity) {
-	}
-
-	entityx::Entity entity;
-};
-
-/// System Definitions
-class MovementSystem : public entityx::System<MovementSystem>, public entityx::Receiver<MovementSystem> {
-public:
-	MovementSystem() {
-	}
-	~MovementSystem() {
-	}
-
-	void update(entityx::EntityManager &es, entityx::EventManager &events, entityx::TimeDelta dt) override {
-		es.each<Physics, Movable>([this, &dt](entityx::Entity entity, Physics& physic, Movable& movable) {
-			// Movable entities are stopped until we receive a new MovementEvent. 
-			//const btVector3& velocity = physic.rigid_body->getLinearVelocity();
-			//physic.rigid_body->setLinearVelocity(btVector3(0, velocity.y(), 0));
-			if (m_movements.find(entity) != m_movements.end()) {
-				// If a MovementEvent has been retrieved we set the new linear velocity towards the direction 
-				// defined in the Event and at the speed defined in the MovableComponent
-				btVector3 dv(m_movements[entity].direction * movable.speed);
-				
-				//physic.rigid_body->setLinearVelocity(new_velocity);
-				btTransform new_tr = physic.rigid_body->getWorldTransform();
-				new_tr.setOrigin(new_tr.getOrigin() + dv * dt);
-				physic.rigid_body->setWorldTransform(new_tr);
-			}
-		});
-	}
-
-	void configure(entityx::EventManager &events) override {
-		events.subscribe<DisplacementEvent>(*this);
-		events.subscribe<StopDisplacementEvent>(*this);
-	}
-
-	void receive(const DisplacementEvent& move) {
-		Movement movement = { btVector3(move.direction.x, move.direction.y, move.direction.z) };
-		movement.direction.normalize();
-		m_movements[move.entity] = movement;
-	}
-
-	void receive(const StopDisplacementEvent& stop_move) {
-		m_movements.erase(stop_move.entity);
-	}
-private:
-	struct Movement {
-		btVector3 direction;
-	};
-
-	std::map<entityx::Entity, Movement> m_movements;
-};
+using PhysicConstraintSystemPtr = std::shared_ptr<PhysicConstraintSystem>;
 
 void Game::createPlayerEntity(entityx::EntityManager &es, World& world) {
 	entityx::Entity entity = es.create();
@@ -235,21 +178,22 @@ void Game::createDoorEntity(entityx::EntityManager &es, World& world) {
 	btVector3 torque(0, 80, 0);
 
 	Physics physics = { entity_shape, motion_state, body, mass, local_inertia};
+	//physics.constraints["pivot"] = new PhysicHingeConstraint(body, axis, pivot, torque, angle - M_PI * 0.5, angle + M_PI * 0.5);
 	entity.assign<Physics>(physics);
 
-
-	PhysicHingeConstraint* constraint = new PhysicHingeConstraint(entity, axis, pivot, torque, angle - M_PI * 0.5, angle + M_PI * 0.5);
-	physics.addPhysicConstraint("pivot", constraint);
-	entity.remove<Physics>();
-	entity.assign<Physics>(physics);
 
 	// Script Component
-	Manager<std::string, std::shared_ptr<FiniteStateMachine>>& scripts = Manager<std::string, std::shared_ptr<FiniteStateMachine>>::getInstance();
+	ScriptManager& scripts = ScriptManager::getInstance();
 	Script script;
-	script.m_scripts[Script::INTERACTION] = scripts.get("door_opening");
+	script.m_scripts[Script::INTERACTION] = "door_opening";
 	entity.assign<Script>(script);
 
 	addEntity("door", entity);
+
+	// Add of a hinge constraint of axis Y
+	events.emit<AddConstraint>(AddConstraint(entity,
+		"pivotY",
+		new PhysicHingeConstraint(body, axis, pivot, torque, angle - M_PI * 0.5, angle + M_PI * 0.5)));
 }
 
 void Game::createSwordEntity(const std::string& name, entityx::EntityManager &es, World& world) {
@@ -379,8 +323,12 @@ Game::Game(GameProgram& program, InputHandler& input_handler) : ProgramState(pro
 																	  m_alpha(0.f),
 																	  m_player_direction(0.f) {
 	World& world = Singleton<World>::getInstance();
-	// Init scripts
-	initScripts();
+	// Init systems
+	/// Set up systems
+
+	systems.add<PhysicConstraintSystem>();
+	systems.configure();
+
 	// Add game entities
 
 	createGroundEntity(entities);
@@ -390,15 +338,16 @@ Game::Game(GameProgram& program, InputHandler& input_handler) : ProgramState(pro
 
 	// The player is instanciated in last after all other entities/objects have been instanciated;
 	createPlayerEntity(entities, world);
-
-	/// Set up systems
 	systems.add<PhysicSystem>(entities, *(world.dynamic_world));
 	systems.add<MovementSystem>();
+	systems.add<AttackSystem>();
 	systems.add<ScriptSystem>(world.get("player"));
 	systems.add<PickingSystem>(m_viewer, m_input_handler, world.get("player"));
 	systems.add<RenderSystem>(m_viewer);
-
 	systems.configure();
+
+	// Init scripts
+	initScripts();
 
 	// Keyboard callbacks definition
 	Viewer& viewer = m_viewer;
@@ -432,12 +381,18 @@ Game::Game(GameProgram& program, InputHandler& input_handler) : ProgramState(pro
 	m_commands.insert(std::pair<int, std::function<void()> >(SDLK_e, [&ev, &world]() {
 		ev.emit<InteractionEvent>({world.get("player")});
 	}));
+	/// Interaction Key : r
+	m_commands.insert(std::pair<int, std::function<void()> >(SDLK_r, [&ev, &world]() {
+		ev.emit<AttackEvent>({ world.get("player") });
+	}));
 }
 
-void Game::initScripts() const {
-	Manager<std::string, std::shared_ptr<FiniteStateMachine>>& scripts = Manager<std::string, std::shared_ptr<FiniteStateMachine>>::getInstance();
+void Game::initScripts() {
+	ScriptManager& scripts = ScriptManager::getInstance();
 	const Viewer& viewer = m_viewer;
 	const InputHandler& input_handler = m_input_handler;
+	entityx::EventManager& ev = events;
+	PhysicConstraintSystemPtr pPhysicConstraintSystem = (PhysicConstraintSystemPtr)systems.system<PhysicConstraintSystem>();
 
 	/// Open door script
 	FiniteStateMachine::State* door_opening_start = new FiniteStateMachine::State(
@@ -448,42 +403,34 @@ void Game::initScripts() const {
 
 	FiniteStateMachine::State* door_push_plus = new FiniteStateMachine::State(
 		[](entityx::Entity entity, entityx::Entity player) {},
-		[&viewer](entityx::Entity entity, entityx::Entity player) {
+		[&ev](entityx::Entity entity, entityx::Entity player) {
 		std::cout << "Step 2 : Push the door in + sense" << std::endl;
-		PhysicHingeConstraint* pivot = (PhysicHingeConstraint*)(entity.component<Physics>()->constraints["pivot"]);
-		assert(pivot != nullptr);
-		btScalar from_angle = (pivot->getLowerLimitAngle() + pivot->getUpperLimitAngle()) / 2.f;
-		pivot->start(from_angle, pivot->getUpperLimitAngle());
+
+		ev.emit<StartImpulseHinge>(StartImpulseHinge(entity, "pivotY", 3 * M_PI / 4));
 	});
 
 	FiniteStateMachine::State* door_pull_plus = new FiniteStateMachine::State(
 		[](entityx::Entity entity, entityx::Entity player) {},
-		[&viewer](entityx::Entity entity, entityx::Entity player) {
+		[&ev](entityx::Entity entity, entityx::Entity player) {
 		std::cout << "Step 3 : Pull the door in + sense" << std::endl;
-		PhysicHingeConstraint* pivot = (PhysicHingeConstraint*)(entity.component<Physics>()->constraints["pivot"]);
-		assert(pivot != nullptr);
-		btScalar to_angle = (pivot->getLowerLimitAngle() + pivot->getUpperLimitAngle()) / 2.f;
-		pivot->start(pivot->getUpperLimitAngle(), to_angle);
+
+		ev.emit<StartImpulseHinge>(StartImpulseHinge(entity, "pivotY", 0));
 	});
 
 	FiniteStateMachine::State* door_push_minus = new FiniteStateMachine::State(
 		[](entityx::Entity entity, entityx::Entity player) {},
-		[&viewer](entityx::Entity entity, entityx::Entity player) {
+		[&ev](entityx::Entity entity, entityx::Entity player) {
 		std::cout << "Step 4 : Push the door in - sense" << std::endl;
-		PhysicHingeConstraint* pivot = (PhysicHingeConstraint*)(entity.component<Physics>()->constraints["pivot"]);
-		assert(pivot != nullptr);
-		btScalar from_angle = (pivot->getLowerLimitAngle() + pivot->getUpperLimitAngle()) / 2.f;
-		pivot->start(from_angle, pivot->getLowerLimitAngle());
+
+		ev.emit<StartImpulseHinge>(StartImpulseHinge(entity, "pivotY", -M_PI / 4));
 	});
 
 	FiniteStateMachine::State* door_pull_minus = new FiniteStateMachine::State(
 		[](entityx::Entity entity, entityx::Entity player) {},
-		[&viewer](entityx::Entity entity, entityx::Entity player) {
+		[&ev](entityx::Entity entity, entityx::Entity player) {
 		std::cout << "Step 5 : Pull the door in - sense" << std::endl;
-		PhysicHingeConstraint* pivot = (PhysicHingeConstraint*)(entity.component<Physics>()->constraints["pivot"]);
-		assert(pivot != nullptr);
-		btScalar to_angle = (pivot->getLowerLimitAngle() + pivot->getUpperLimitAngle()) / 2.f;
-		pivot->start(pivot->getLowerLimitAngle(), to_angle);
+
+		ev.emit<StartImpulseHinge>(StartImpulseHinge(entity, "pivotY", 0));
 	});
 	
 	door_opening_start->addTransition(FiniteStateMachine::Transition(door_push_plus,
@@ -494,11 +441,12 @@ void Game::initScripts() const {
 		if (entity_picked != entity)
 			return false;
 
-		entityx::ComponentHandle<Physics> physic = entity.component<Physics>();
-		PhysicHingeConstraint* pivot = (PhysicHingeConstraint*)(physic->constraints["pivot"]);
+		/*entityx::ComponentHandle<Physics> physic = entity.component<Physics>();
+		PhysicHingeConstraint* pivot = (PhysicHingeConstraint*)(physic->constraints["pivot2"]);
 		std::cout << "1 -> 2" << std::endl;
 		assert(pivot != nullptr);
-		btScalar start_angle = (pivot->getUpperLimitAngle() + pivot->getLowerLimitAngle()) / 2.f;
+		btScalar start_angle = (pivot->() + pivot->getLowerLimitAngle()) / 2.f;*/
+		btScalar start_angle = M_PI / 4;
 		glm::vec2 door_v(glm::cos(start_angle), -glm::sin(start_angle));
 		glm::vec2 pos_v(viewer.getPosition().x, viewer.getPosition().z);
 		pos_v = glm::normalize(pos_v);
@@ -515,12 +463,12 @@ void Game::initScripts() const {
 		if (entity_picked != entity)
 			return false;
 
-		entityx::ComponentHandle<Physics> physic = entity.component<Physics>();
-		PhysicHingeConstraint* pivot = (PhysicHingeConstraint*)(physic->constraints["pivot"]);
+		/*entityx::ComponentHandle<Physics> physic = entity.component<Physics>();
+		PhysicHingeConstraint* pivot = (PhysicHingeConstraint*)(physic->constraints["pivot2"]);
 		std::cout << "1 -> 4" << std::endl;
 		assert(pivot != nullptr);
-		btScalar start_angle = (pivot->getUpperLimitAngle() + pivot->getLowerLimitAngle()) / 2.f;
-
+		btScalar start_angle = (pivot->getUpperLimitAngle() + pivot->getLowerLimitAngle()) / 2.f;*/
+		btScalar start_angle = M_PI / 4;
 		glm::vec2 door_v(glm::cos(start_angle), -glm::sin(start_angle));
 		glm::vec2 pos_v(viewer.getPosition().x, viewer.getPosition().z);
 		pos_v = glm::normalize(pos_v);
@@ -529,7 +477,8 @@ void Game::initScripts() const {
 		return (sin_theta >= 0.f);
 	}));
 
-	const std::function<bool(entityx::Entity entity, entityx::Entity player)>& transition_door = [&input_handler, &viewer](entityx::Entity entity, entityx::Entity player) {
+	const std::function<bool(entityx::Entity entity, entityx::Entity player)>& transition_door = 
+	[&input_handler, &viewer, pPhysicConstraintSystem] (entityx::Entity entity, entityx::Entity player) {
 		if (!input_handler.m_keydown)
 			return false;
 		if (input_handler.m_key.find(SDLK_e) == input_handler.m_key.end())
@@ -539,10 +488,8 @@ void Game::initScripts() const {
 			return false;
 		if (entity_picked != entity)
 			return false;
-
-		entityx::ComponentHandle<Physics> physic = entity.component<Physics>();
-		PhysicHingeConstraint* pivot = (PhysicHingeConstraint*)(physic->constraints["pivot"]);
-		return pivot->isFinished();
+		
+		return pPhysicConstraintSystem->isFinished(entity, "pivotY");
 	};
 
 	door_push_plus->addTransition(FiniteStateMachine::Transition(door_pull_plus, transition_door));
@@ -579,7 +526,6 @@ void Game::addEntity(const std::string& name, entityx::Entity entity) {
 	world.addEntity(name, entity);
 }
 
-
 glm::vec3 btVector3ToGlmVec3(const btVector3& vec) {
 	return glm::vec3(vec.x(), vec.y(), vec.z());
 }
@@ -595,13 +541,13 @@ void Game::run() {
 	GameProgram::m_current_viewer = &m_viewer;
 
 	/// Systems updates
-	//systems.update_all(1.f / 60.f);
+	systems.update_all(1.f / 60.f);
 
-	systems.update<PhysicSystem>(1.f / 60.f);
+	/*systems.update<PhysicSystem>(1.f / 60.f);
 	systems.update<MovementSystem>(1.f / 60.f);
 	systems.update<ScriptSystem>(1.f / 60.f);
 	systems.update<PickingSystem>(1.f / 60.f);
-	systems.update<RenderSystem>(1.f / 60.f);
+	systems.update<RenderSystem>(1.f / 60.f);*/
 
 	/// Player keyboard callbacks
 	// Reset the direction vector of the player

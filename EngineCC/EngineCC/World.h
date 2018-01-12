@@ -56,15 +56,15 @@ public:
 			deleteEntity(name);
 		}
 
-		entityx::ComponentHandle<Physics> physic = entity.component<Physics>();
+		Physics* physic = entity.component<Physics>().get();
 		if (physic == NULL)
 			return;
 		dynamic_world->addRigidBody(physic->rigid_body);
 		
 		// Add entity constraints to the world
-		for (std::map<std::string, PhysicConstraint*>::iterator it = physic->constraints.begin(); it != physic->constraints.end(); ++it) {
+		/*for (std::map<std::string, PhysicConstraint*>::iterator it = physic->constraints.begin(); it != physic->constraints.end(); ++it) {
 			dynamic_world->addConstraint(it->second->getTypedConstraint());
-		}
+		}*/
 
 		m_entities[name] = entity;
 	}
@@ -134,9 +134,9 @@ private:
 
 		delete physic->collision_shape;
 
-		for (std::map<std::string, PhysicConstraint*>::iterator it = physic->constraints.begin(); it != physic->constraints.end(); ++it) {
+		/*for (std::map<std::string, PhysicConstraint*>::iterator it = physic->constraints.begin(); it != physic->constraints.end(); ++it) {
 			delete it->second;
-		}
+		}*/
 	}
 public:
 	/// Bullet dynamic world

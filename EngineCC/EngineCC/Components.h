@@ -2,6 +2,7 @@
 #include <memory>
 #include <map>
 #include <string>
+#include <entityx\Entity.h>
 
 #include "btBulletDynamicsCommon.h"
 #include "Renderable.h"
@@ -9,15 +10,24 @@
 
 #include "PhysicConstraint.h"
 
+template<typename T> using Component = entityx::ComponentHandle<T>;
+
+template<typename T>
+bool has_component(entityx::Entity entity) {
+	assert(entity.valid());
+	return entity.has_component<T>();
+}
+
+template<typename T>
+Component<T> getComponent(entityx::Entity entity) {
+	assert(entity.has_component<T>());
+	return entity.component<T>();
+}
+
 /// Component Definitions
 using Render = std::shared_ptr<RenderObject>;
 
 struct Physics {
-	void addPhysicConstraint(const std::string& name, PhysicConstraint* physic_constraint) {
-		assert(constraints.find(name) == constraints.end());
-		constraints[name] = physic_constraint;
-	}
-
 	// if nullptr => no collision
 	btCollisionShape* collision_shape;
 	// One constraint per entity possible
@@ -26,8 +36,6 @@ struct Physics {
 
 	float mass;
 	btVector3 local_inertia;
-
-	std::map<std::string, PhysicConstraint*> constraints;
 };
 
 struct Movable {
@@ -53,10 +61,11 @@ struct Script {
 		INTERACTION,
 		ATTACK,
 		LOCATION,
-		INTERACTION_CARRYABLE
+		INTERACTION_CARRYABLE,
+		NUM_ACTIVATION
 	};
 
-	std::map<Activation, std::weak_ptr<FiniteStateMachine>> m_scripts;
+	std::array<std::string, Activation::NUM_ACTIVATION> m_scripts;
 };
 
 struct Carryable {

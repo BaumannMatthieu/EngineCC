@@ -34,7 +34,7 @@ private:
 
 	void addEntity(const std::string& name, entityx::Entity entity);
 
-	void initScripts() const;
+	void initScripts();
 
 private:
 	Viewer m_viewer;
