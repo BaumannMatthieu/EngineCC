@@ -1,16 +1,23 @@
 #pragma once
 #include <memory>
 #include <map>
+#include <string>
 
 #include "btBulletDynamicsCommon.h"
 #include "Renderable.h"
 #include "FiniteStateMachine.h"
-#include "HierarchicalEntities.h"
+
+#include "PhysicConstraint.h"
 
 /// Component Definitions
 using Render = std::shared_ptr<RenderObject>;
 
 struct Physics {
+	void addPhysicConstraint(const std::string& name, PhysicConstraint* physic_constraint) {
+		assert(constraints.find(name) == constraints.end());
+		constraints[name] = physic_constraint;
+	}
+
 	// if nullptr => no collision
 	btCollisionShape* collision_shape;
 	// One constraint per entity possible
@@ -20,20 +27,7 @@ struct Physics {
 	float mass;
 	btVector3 local_inertia;
 
-	btTypedConstraint* constraint;
-
-	Physics& operator=(const Physics& other) {
-		if (&other == this)
-			return *this;
-
-		collision_shape = new btConvexHullShape(dynamic_cast<btConvexHullShape&>(*(other.collision_shape)));
-		motion_state = new btDefaultMotionState(*(other.motion_state));
-		rigid_body = new btRigidBody(*(other.rigid_body));
-
-		mass = other.mass;
-		local_inertia = other.local_inertia;
-		return *this;
-	}
+	std::map<std::string, PhysicConstraint*> constraints;
 };
 
 struct Movable {

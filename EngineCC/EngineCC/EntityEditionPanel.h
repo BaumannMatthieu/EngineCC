@@ -307,7 +307,7 @@ public:
 		if (data.disable_angular_rotation)
 			body->setAngularFactor(0.f);
 
-		Physics physics = { entity_shape, motion_state, body, data.mass, local_inertia, nullptr };
+		Physics physics = { entity_shape, motion_state, body, data.mass, local_inertia };
 		entity.assign<Physics>(physics);
 	}
 

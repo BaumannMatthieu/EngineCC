@@ -65,11 +65,13 @@ public:
 		events.subscribe<DisplacementEvent>(*this);
 		events.subscribe<StopDisplacementEvent>(*this);
 	}
+
 	void receive(const DisplacementEvent& move) {
 		Movement movement = { btVector3(move.direction.x, move.direction.y, move.direction.z) };
 		movement.direction.normalize();
 		m_movements[move.entity] = movement;
 	}
+
 	void receive(const StopDisplacementEvent& stop_move) {
 		m_movements.erase(stop_move.entity);
 	}
@@ -121,7 +123,7 @@ void Game::createPlayerEntity(entityx::EntityManager &es, World& world) {
 	// Disable angular rotation when hitting another body
 	body->setAngularFactor(0);
 
-	Physics physics = { compound, motion_state, body, mass, local_inertia, nullptr };
+	Physics physics = { compound, motion_state, body, mass, local_inertia };
 	entity.assign<Physics>(physics);
 
 	// Movable Component
@@ -172,7 +174,7 @@ void Game::createGroundEntity(entityx::EntityManager &es) {
 	btRigidBody* body = new btRigidBody(rbInfo);
 	
 	body->setFriction(2.f);
-	Physics physics = { ground_shape, motion_state, body, mass, local_inertia, nullptr };
+	Physics physics = { ground_shape, motion_state, body, mass, local_inertia };
 	entity.assign<Physics>(physics);
 
 	// Add an open script to the door
@@ -230,14 +232,15 @@ void Game::createDoorEntity(entityx::EntityManager &es, World& world) {
 	// Add hinge constraint
 	btVector3 pivot(-length / 2.f, 0, 0);
 	btVector3 axis(0, 1, 0);
+	btVector3 torque(0, 80, 0);
 
-	btHingeConstraint* hinge_constraint = new btHingeConstraint(*body, pivot, axis);
-	hinge_constraint->setLimit(angle - M_PI * 0.5, angle + M_PI * 0.5);
+	Physics physics = { entity_shape, motion_state, body, mass, local_inertia};
+	entity.assign<Physics>(physics);
 
-	/// For debug purposes
-	hinge_constraint->setDbgDrawSize(btScalar(5.f));
 
-	Physics physics = { entity_shape, motion_state, body, mass, local_inertia, hinge_constraint};
+	PhysicHingeConstraint* constraint = new PhysicHingeConstraint(entity, axis, pivot, torque, angle - M_PI * 0.5, angle + M_PI * 0.5);
+	physics.addPhysicConstraint("pivot", constraint);
+	entity.remove<Physics>();
 	entity.assign<Physics>(physics);
 
 	// Script Component
@@ -287,7 +290,7 @@ void Game::createSwordEntity(const std::string& name, entityx::EntityManager &es
 	//if (data.disable_angular_rotation)
 	//	body->setAngularFactor(0.f);
 
-	Physics physics = { entity_shape, motion_state, body, mass, local_inertia, nullptr };
+	Physics physics = { entity_shape, motion_state, body, mass, local_inertia };
 	entity.assign<Physics>(physics);
 
 	// A sword is carryable
@@ -332,7 +335,7 @@ void Game::createArrowEntity(entityx::EntityManager &es, entityx::EventManager &
 	btRigidBody* body = new btRigidBody(rbInfo);
 	body->setLinearVelocity(btVector3(m_viewer.getDirection().x, m_viewer.getDirection().y, m_viewer.getDirection().z));
 
-	Physics physics = { arrow_shape, motion_state, body, mass, local_inertia, nullptr };
+	Physics physics = { arrow_shape, motion_state, body, mass, local_inertia };
 	entity.assign<Physics>(physics);
 	
 	addEntity("arrow", entity);
@@ -437,72 +440,96 @@ void Game::initScripts() const {
 	const InputHandler& input_handler = m_input_handler;
 
 	/// Open door script
-	FiniteStateMachine::State* door_opening = new FiniteStateMachine::State(
+	FiniteStateMachine::State* door_opening_start = new FiniteStateMachine::State(
 		[&viewer](entityx::Entity entity, entityx::Entity player) {
+	}, [](entityx::Entity entity, entityx::Entity player) {
+		std::cout << "Step 1 : Opening a door" << std::endl;
+	});
+
+	FiniteStateMachine::State* door_push_plus = new FiniteStateMachine::State(
+		[](entityx::Entity entity, entityx::Entity player) {},
+		[&viewer](entityx::Entity entity, entityx::Entity player) {
+		std::cout << "Step 2 : Push the door in + sense" << std::endl;
+		PhysicHingeConstraint* pivot = (PhysicHingeConstraint*)(entity.component<Physics>()->constraints["pivot"]);
+		assert(pivot != nullptr);
+		btScalar from_angle = (pivot->getLowerLimitAngle() + pivot->getUpperLimitAngle()) / 2.f;
+		pivot->start(from_angle, pivot->getUpperLimitAngle());
+	});
+
+	FiniteStateMachine::State* door_pull_plus = new FiniteStateMachine::State(
+		[](entityx::Entity entity, entityx::Entity player) {},
+		[&viewer](entityx::Entity entity, entityx::Entity player) {
+		std::cout << "Step 3 : Pull the door in + sense" << std::endl;
+		PhysicHingeConstraint* pivot = (PhysicHingeConstraint*)(entity.component<Physics>()->constraints["pivot"]);
+		assert(pivot != nullptr);
+		btScalar to_angle = (pivot->getLowerLimitAngle() + pivot->getUpperLimitAngle()) / 2.f;
+		pivot->start(pivot->getUpperLimitAngle(), to_angle);
+	});
+
+	FiniteStateMachine::State* door_push_minus = new FiniteStateMachine::State(
+		[](entityx::Entity entity, entityx::Entity player) {},
+		[&viewer](entityx::Entity entity, entityx::Entity player) {
+		std::cout << "Step 4 : Push the door in - sense" << std::endl;
+		PhysicHingeConstraint* pivot = (PhysicHingeConstraint*)(entity.component<Physics>()->constraints["pivot"]);
+		assert(pivot != nullptr);
+		btScalar from_angle = (pivot->getLowerLimitAngle() + pivot->getUpperLimitAngle()) / 2.f;
+		pivot->start(from_angle, pivot->getLowerLimitAngle());
+	});
+
+	FiniteStateMachine::State* door_pull_minus = new FiniteStateMachine::State(
+		[](entityx::Entity entity, entityx::Entity player) {},
+		[&viewer](entityx::Entity entity, entityx::Entity player) {
+		std::cout << "Step 5 : Pull the door in - sense" << std::endl;
+		PhysicHingeConstraint* pivot = (PhysicHingeConstraint*)(entity.component<Physics>()->constraints["pivot"]);
+		assert(pivot != nullptr);
+		btScalar to_angle = (pivot->getLowerLimitAngle() + pivot->getUpperLimitAngle()) / 2.f;
+		pivot->start(pivot->getLowerLimitAngle(), to_angle);
+	});
+	
+	door_opening_start->addTransition(FiniteStateMachine::Transition(door_push_plus,
+		[&input_handler, &viewer](entityx::Entity entity, entityx::Entity player) {
+		entityx::Entity entity_picked;
+		if (!PickingSystem::isEntityPerInteraction(entity_picked, input_handler, viewer))
+			return false;
+		if (entity_picked != entity)
+			return false;
+
 		entityx::ComponentHandle<Physics> physic = entity.component<Physics>();
-
-		assert(physic->constraint != nullptr);
-		assert(physic->constraint->getConstraintType() == btTypedConstraintType::HINGE_CONSTRAINT_TYPE);
-
-		btHingeConstraint* constraint = (btHingeConstraint*)physic->constraint;
-		
-		btScalar angle = constraint->getHingeAngle();
-		if (angle > constraint->getUpperLimit()*0.95f || angle < constraint->getLowerLimit()*0.95f) {
-			physic->rigid_body->applyTorque(btVector3(0, 0, 0));
-			physic->rigid_body->setAngularVelocity(btVector3(0, 0, 0));
-			physic->rigid_body->setAngularFactor(btVector3(0, 0, 0));
-			return;
-		}
-
-		physic->rigid_body->setAngularFactor(btVector3(0, 1, 0));
-		btScalar start_angle = (constraint->getUpperLimit() + constraint->getLowerLimit()) / 2.f;
-		
+		PhysicHingeConstraint* pivot = (PhysicHingeConstraint*)(physic->constraints["pivot"]);
+		std::cout << "1 -> 2" << std::endl;
+		assert(pivot != nullptr);
+		btScalar start_angle = (pivot->getUpperLimitAngle() + pivot->getLowerLimitAngle()) / 2.f;
 		glm::vec2 door_v(glm::cos(start_angle), -glm::sin(start_angle));
 		glm::vec2 pos_v(viewer.getPosition().x, viewer.getPosition().z);
 		pos_v = glm::normalize(pos_v);
 
-		btScalar torque_y = -20;
 		float sin_theta = pos_v.x * door_v.y - pos_v.y * door_v.x;
-		if (sin_theta < 0.f)
-			torque_y = -torque_y;
+		return (sin_theta < 0.f);
+	}));
 
-		physic->rigid_body->applyTorque(btVector3(0, torque_y, 0));
-		std::cout << "Door opening ! grrrr" << std::endl;
-	});
-
-	/// Close door script
-	FiniteStateMachine::State* door_closing = new FiniteStateMachine::State(
-		[&viewer](entityx::Entity entity, entityx::Entity player) {
-		entityx::ComponentHandle<Physics> physic = entity.component<Physics>();
-
-		assert(physic->constraint != nullptr);
-		assert(physic->constraint->getConstraintType() == btTypedConstraintType::HINGE_CONSTRAINT_TYPE);
-
-		btHingeConstraint* constraint = (btHingeConstraint*)physic->constraint;
-
-		btScalar angle = constraint->getHingeAngle();
-		btScalar start_angle = (constraint->getUpperLimit() + constraint->getLowerLimit()) / 2.f;
-
-		if (abs(angle - start_angle) < 0.05f) {
-			physic->rigid_body->applyTorque(btVector3(0, 0, 0));
-			physic->rigid_body->setAngularVelocity(btVector3(0, 0, 0));
-			physic->rigid_body->setAngularFactor(btVector3(0, 0, 0));
-			return;
-		}
-		physic->rigid_body->setAngularFactor(btVector3(0, 1, 0));
-		
-		bool open_upper_side = (angle > start_angle);
-
-		btScalar torque_y = 20.f;
-		if(open_upper_side)
-			torque_y = -torque_y;
-
-		physic->rigid_body->applyTorque(btVector3(0, torque_y, 0));
-		std::cout << "Door closing ! grrrr" << std::endl;
-	});
-	
-	door_opening->addTransition(FiniteStateMachine::Transition(door_closing,
+	door_opening_start->addTransition(FiniteStateMachine::Transition(door_push_minus,
 		[&input_handler, &viewer](entityx::Entity entity, entityx::Entity player) {
+		entityx::Entity entity_picked;
+		if (!PickingSystem::isEntityPerInteraction(entity_picked, input_handler, viewer))
+			return false;
+		if (entity_picked != entity)
+			return false;
+
+		entityx::ComponentHandle<Physics> physic = entity.component<Physics>();
+		PhysicHingeConstraint* pivot = (PhysicHingeConstraint*)(physic->constraints["pivot"]);
+		std::cout << "1 -> 4" << std::endl;
+		assert(pivot != nullptr);
+		btScalar start_angle = (pivot->getUpperLimitAngle() + pivot->getLowerLimitAngle()) / 2.f;
+
+		glm::vec2 door_v(glm::cos(start_angle), -glm::sin(start_angle));
+		glm::vec2 pos_v(viewer.getPosition().x, viewer.getPosition().z);
+		pos_v = glm::normalize(pos_v);
+
+		float sin_theta = pos_v.x * door_v.y - pos_v.y * door_v.x;
+		return (sin_theta >= 0.f);
+	}));
+
+	const std::function<bool(entityx::Entity entity, entityx::Entity player)>& transition_door = [&input_handler, &viewer](entityx::Entity entity, entityx::Entity player) {
 		if (!input_handler.m_keydown)
 			return false;
 		if (input_handler.m_key.find(SDLK_e) == input_handler.m_key.end())
@@ -514,46 +541,14 @@ void Game::initScripts() const {
 			return false;
 
 		entityx::ComponentHandle<Physics> physic = entity.component<Physics>();
+		PhysicHingeConstraint* pivot = (PhysicHingeConstraint*)(physic->constraints["pivot"]);
+		return pivot->isFinished();
+	};
 
-		assert(physic->constraint != nullptr);
-		assert(physic->constraint->getConstraintType() == btTypedConstraintType::HINGE_CONSTRAINT_TYPE);
-
-		btHingeConstraint* constraint = (btHingeConstraint*)physic->constraint;
-		btScalar angle = constraint->getHingeAngle();
-		if (angle < constraint->getUpperLimit()*0.95f && angle > constraint->getLowerLimit()*0.95f) {
-			return false;
-		}
-
-		return true;
-	}));
-
-	door_closing->addTransition(FiniteStateMachine::Transition(door_opening,
-		[&input_handler, &viewer](entityx::Entity entity, entityx::Entity player) {
-		if (!input_handler.m_keydown)
-			return false;
-		if (input_handler.m_key.find(SDLK_e) == input_handler.m_key.end())
-			return false;
-		entityx::Entity entity_picked;
-		if (!PickingSystem::isEntityPerInteraction(entity_picked, input_handler, viewer))
-			return false;
-		if (entity_picked != entity)
-			return false;
-		
-		entityx::ComponentHandle<Physics> physic = entity.component<Physics>();
-
-		assert(physic->constraint != nullptr);
-		assert(physic->constraint->getConstraintType() == btTypedConstraintType::HINGE_CONSTRAINT_TYPE);
-
-		btHingeConstraint* constraint = (btHingeConstraint*)physic->constraint;
-		btScalar angle = constraint->getHingeAngle();
-		btScalar start_angle = (constraint->getUpperLimit() + constraint->getLowerLimit()) / 2.f;
-
-		if (abs(angle - start_angle) > 0.05f) {
-			return false;
-		}
-
-		return true;
-	}));
+	door_push_plus->addTransition(FiniteStateMachine::Transition(door_pull_plus, transition_door));
+	door_pull_plus->addTransition(FiniteStateMachine::Transition(door_opening_start, transition_door));
+	door_push_minus->addTransition(FiniteStateMachine::Transition(door_pull_minus, transition_door));
+	door_pull_minus->addTransition(FiniteStateMachine::Transition(door_opening_start, transition_door));
 
 	/// Interaction script for picked objects
 	FiniteStateMachine::State* picking = new FiniteStateMachine::State(
@@ -562,7 +557,7 @@ void Game::initScripts() const {
 		
 	});
 
-	scripts.insert("door_opening", std::make_shared<FiniteStateMachine>(door_opening));
+	scripts.insert("door_opening", std::make_shared<FiniteStateMachine>(door_opening_start));
 }
 
 Game::~Game() {

@@ -7,6 +7,7 @@
 #include "btBulletDynamicsCommon.h"
 
 #include "Components.h"
+#include "PhysicConstraint.h"
 
 class World {
 public:
@@ -60,8 +61,10 @@ public:
 			return;
 		dynamic_world->addRigidBody(physic->rigid_body);
 		
-		if(physic->constraint != nullptr)
-			dynamic_world->addConstraint(physic->constraint);
+		// Add entity constraints to the world
+		for (std::map<std::string, PhysicConstraint*>::iterator it = physic->constraints.begin(); it != physic->constraints.end(); ++it) {
+			dynamic_world->addConstraint(it->second->getTypedConstraint());
+		}
 
 		m_entities[name] = entity;
 	}
@@ -131,8 +134,8 @@ private:
 
 		delete physic->collision_shape;
 
-		if (physic->constraint != nullptr) {
-			delete physic->constraint;
+		for (std::map<std::string, PhysicConstraint*>::iterator it = physic->constraints.begin(); it != physic->constraints.end(); ++it) {
+			delete it->second;
 		}
 	}
 public:

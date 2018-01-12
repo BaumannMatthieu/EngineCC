@@ -132,6 +132,7 @@
     <ClCompile Include="main.cpp" />
     <ClCompile Include="Mesh.cpp" />
     <ClCompile Include="Model.cpp" />
+    <ClCompile Include="PhysicConstraint.cpp" />
     <ClCompile Include="PickingSystem.cpp" />
     <ClCompile Include="Primitive.cpp" />
     <ClCompile Include="ProgramState.cpp" />
@@ -171,6 +172,7 @@
     <ClInclude Include="Manager.h" />
     <ClInclude Include="Mesh.h" />
     <ClInclude Include="Model.h" />
+    <ClInclude Include="PhysicConstraint.h" />
     <ClInclude Include="PhysicSystem.h" />
     <ClInclude Include="PickingSystem.h" />
     <ClInclude Include="Primitive.h" />

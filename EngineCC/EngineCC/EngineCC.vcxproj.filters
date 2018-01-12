@@ -23,6 +23,9 @@
     <Filter Include="Game\Systems">
       <UniqueIdentifier>{a6698b40-74e8-4c56-a256-525e3a6d6f4c}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Game\Systems\PhysicSystem">
+      <UniqueIdentifier>{57addd2d-e129-4ae6-a03a-ad3373820b36}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Renderable.cpp">
@@ -93,6 +96,9 @@
     </ClCompile>
     <ClCompile Include="HierarchicalEntities.cpp">
       <Filter>Game</Filter>
+    </ClCompile>
+    <ClCompile Include="PhysicConstraint.cpp">
+      <Filter>Game\Systems\PhysicSystem</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -201,9 +207,6 @@
     <ClInclude Include="RenderSystem.h">
       <Filter>Game\Systems</Filter>
     </ClInclude>
-    <ClInclude Include="PhysicSystem.h">
-      <Filter>Game\Systems</Filter>
-    </ClInclude>
     <ClInclude Include="World.h">
       <Filter>Game</Filter>
     </ClInclude>
@@ -221,6 +224,12 @@
     </ClInclude>
     <ClInclude Include="HierarchicalEntities.h">
       <Filter>Game</Filter>
+    </ClInclude>
+    <ClInclude Include="PhysicSystem.h">
+      <Filter>Game\Systems\PhysicSystem</Filter>
+    </ClInclude>
+    <ClInclude Include="PhysicConstraint.h">
+      <Filter>Game\Systems\PhysicSystem</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

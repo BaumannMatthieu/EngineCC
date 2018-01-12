@@ -9,16 +9,17 @@
 
 #include "GameProgram.h"
 
+#include "PhysicConstraint.h"
 #include "Singleton.h"
 #include "Manager.h"
 #include "Components.h"
 #include "Shader.h"
 #include "Cube.h"
 
-/// Event for creating movements
+/*/// Event for creating movements
 struct EventRotation {
 	entityx::Entity entity;
-};
+};*/
 
 /// Physic System definition
 class PhysicSystem : public entityx::System<PhysicSystem> {
@@ -99,6 +100,13 @@ public:
 	}
 
 	void update(entityx::EntityManager &es, entityx::EventManager &events, entityx::TimeDelta dt) override {
+		// Update the constraints
+		es.each<Physics>([](entityx::Entity entity, Physics& physics) {
+			for (std::map<std::string, PhysicConstraint*>::iterator it = physics.constraints.begin(); it != physics.constraints.end(); ++it) {
+				it->second->update();
+			}
+		});
+
 		m_dynamic_world.stepSimulation(dt);
 
 		//Draw the debugging bullet world
