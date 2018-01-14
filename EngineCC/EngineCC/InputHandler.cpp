@@ -12,6 +12,7 @@ InputHandler::InputHandler(GameProgram& program) : m_program(program) {
 	m_key_repeat_disabled.insert(SDLK_RETURN);
 	// SDLK_e is reserved for the interaction with other entities
 	m_key_repeat_disabled.insert(SDLK_e);
+	m_key_repeat_disabled.insert(SDLK_r);
 }
 
 InputHandler::~InputHandler() {

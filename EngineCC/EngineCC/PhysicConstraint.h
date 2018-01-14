@@ -35,7 +35,8 @@ public:
 		btScalar lower_limit,
 		btScalar upper_limit);
 
-	~PhysicHingeConstraint() {
+	virtual ~PhysicHingeConstraint() {
+		std::cout << "destructed" << std::endl;
 		delete m_constraint;
 	}
 

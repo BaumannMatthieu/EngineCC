@@ -13,7 +13,7 @@
 template<typename T> using Component = entityx::ComponentHandle<T>;
 
 template<typename T>
-bool has_component(entityx::Entity entity) {
+bool hasComponent(entityx::Entity entity) {
 	assert(entity.valid());
 	return entity.has_component<T>();
 }

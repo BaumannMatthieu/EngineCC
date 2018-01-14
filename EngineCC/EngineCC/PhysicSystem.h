@@ -16,10 +16,7 @@
 #include "Shader.h"
 #include "Cube.h"
 
-/*/// Event for creating movements
-struct EventRotation {
-	entityx::Entity entity;
-};*/
+using namespace std;
 
 /// Physic System definition
 class PhysicSystem : public entityx::System<PhysicSystem> {
@@ -77,7 +74,20 @@ public:
 		std::vector<glm::vec3> m_points;
 		std::vector<glm::vec4> m_colors;
 	};
-public: 
+public:
+	struct YourOwnFilterCallback : public btOverlapFilterCallback
+	{
+		// return true when pairs need collision
+		virtual bool needBroadphaseCollision(btBroadphaseProxy* proxy0, btBroadphaseProxy* proxy1) const
+		{
+			bool collides = (proxy0->m_collisionFilterGroup & proxy1->m_collisionFilterMask) != 0;
+			collides = collides && (proxy1->m_collisionFilterGroup & proxy0->m_collisionFilterMask);
+
+			//add some additional logic here that modified 'collides'
+			return collides;
+		}
+	};
+
 	// Receive entities so that we add them to the dynamic world
 	// entities that will be instanciated during the game will be send
 	// to the PhysicSystem by a special event that will add them too.
@@ -93,12 +103,18 @@ public:
 	}
 
 	void update(entityx::EntityManager &es, entityx::EventManager &events, entityx::TimeDelta dt) override {
-		// Update the constraints
-		/*es.each<Physics>([](entityx::Entity entity, Physics& physics) {
-			for (std::map<std::string, PhysicConstraint*>::iterator it = physics.constraints.begin(); it != physics.constraints.end(); ++it) {
-				it->second->update();
-			}
-		});*/
+		EntityHierarchyManager& entityHierarchyManager = EntityHierarchyManager::getInstance();
+		map<entityx::Entity, EntityHierarchyPtr>& entityHierarchies = entityHierarchyManager.getRessources();
+		for (map<entityx::Entity, EntityHierarchyPtr>::iterator it = entityHierarchies.begin(); it != entityHierarchies.end(); ++it) {
+			EntityHierarchyPtr& entityHierarchy = it->second;
+			entityx::Entity rootEntity = it->first;
+
+			Component<Physics> pPhysicsRootEntityComponent = getComponent<Physics>(rootEntity);
+			btTransform& rootEntityTransform = pPhysicsRootEntityComponent->rigid_body->getWorldTransform();
+			entityHierarchy->setLocalTransform(rootEntityTransform);
+
+			entityHierarchy->computeTransformHierarchy();
+		}
 
 		m_dynamic_world.stepSimulation(dt);
 

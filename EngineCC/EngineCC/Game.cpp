@@ -121,7 +121,6 @@ void Game::createGroundEntity(entityx::EntityManager &es) {
 	entity.assign<Physics>(physics);
 
 	// Add an open script to the door
-
 	addEntity("ground", entity);
 }
 
@@ -324,7 +323,8 @@ Game::Game(GameProgram& program, InputHandler& input_handler) : ProgramState(pro
 	World& world = Singleton<World>::getInstance();
 	// Init systems
 	/// Set up systems
-
+	// The PhysicConstraintSystem is configured before so that he can accept the AddConstraint events 
+	// for the entities that are just created below
 	systems.add<PhysicConstraintSystem>();
 	systems.configure();
 
@@ -377,8 +377,13 @@ Game::Game(GameProgram& program, InputHandler& input_handler) : ProgramState(pro
 	}));
 
 	/// Interaction Key : e 
-	m_commands.insert(std::pair<int, std::function<void()> >(SDLK_e, [&ev, &world]() {
-		ev.emit<InteractionEvent>({world.get("player")});
+	m_commands.insert(std::pair<int, std::function<void()> >(SDLK_e, [&ev, &world, &viewer, &input_handler]() {
+		entityx::Entity interactionWithEntity;
+		// When the user press 'e' we check if the mouse cursor points to an entity called interactionWithEntity
+		if (PickingSystem::isEntityPerInteraction(interactionWithEntity, input_handler, viewer)) {
+			// We emit an InteractionEvent on this entity by the player entity.
+			ev.emit<InteractionEvent>(InteractionEvent(world.get("player"), interactionWithEntity));
+		}
 	}));
 	/// Interaction Key : r
 	m_commands.insert(std::pair<int, std::function<void()> >(SDLK_r, [&ev, &world]() {
@@ -508,6 +513,9 @@ void Game::initScripts() {
 }
 
 Game::~Game() {
+	PhysicConstraintSystemPtr pPhysicConstrainedSystem = systems.system<PhysicConstraintSystem>();
+	pPhysicConstrainedSystem->~PhysicConstraintSystem();
+
 	World& world = Singleton<World>::getInstance();
 	world.free();
 }
@@ -531,8 +539,6 @@ glm::vec3 btVector3ToGlmVec3(const btVector3& vec) {
 }
 
 void Game::run() {
-
-
 	// Get a reference to the world
 	World& world = Singleton<World>::getInstance();
 	entityx::Entity player = world.get("player");
@@ -553,7 +559,7 @@ void Game::run() {
 	// Reset the direction vector of the player
 	m_player_direction = glm::vec3(0.f);
 	this->callbacks();
-
+	
 	/// Player view update
 	// Viewer in game mode update
 	// First Player Shooter

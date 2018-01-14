@@ -123,7 +123,7 @@
     <ClCompile Include="FiniteStateMachine.cpp" />
     <ClCompile Include="Game.cpp" />
     <ClCompile Include="GameProgram.cpp" />
-    <ClCompile Include="HierarchicalEntities.cpp" />
+    <ClCompile Include="EntityHierarchy.cpp" />
     <ClCompile Include="imgui.cpp" />
     <ClCompile Include="imgui_demo.cpp" />
     <ClCompile Include="imgui_draw.cpp" />
@@ -163,7 +163,7 @@
     <ClInclude Include="FiniteStateMachine.h" />
     <ClInclude Include="Game.h" />
     <ClInclude Include="GameProgram.h" />
-    <ClInclude Include="HierarchicalEntities.h" />
+    <ClInclude Include="EntityHierarchy.h" />
     <ClInclude Include="imconfig.h" />
     <ClInclude Include="imgui.h" />
     <ClInclude Include="imgui_impl_sdl_gl3.h" />

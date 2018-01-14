@@ -9,13 +9,49 @@
 #include "Components.h"
 #include "PhysicConstraint.h"
 
+using namespace std;
+
 class World {
 public:
+	class GameCollisionDispatcher : public btCollisionDispatcher {
+	public:
+		GameCollisionDispatcher(btCollisionConfiguration* collisionConfiguration,
+			map<btCollisionObject*, entityx::Entity>& entitiesPerCollisionObject) : btCollisionDispatcher(collisionConfiguration), m_entitiesPerCollisionObject(entitiesPerCollisionObject) {
+		}
+
+		bool isEntityCarried(entityx::Entity handlerEntity, entityx::Entity carriedEntity) {
+			if (!hasComponent<Handler>(handlerEntity))
+				return false;
+
+			Component<Handler> pHandlerEntityComponent = getComponent<Handler>(handlerEntity);
+			if (pHandlerEntityComponent->left_arm == carriedEntity || pHandlerEntityComponent->right_arm == carriedEntity)
+				return true;
+
+			return false;
+		}
+
+		virtual bool needsCollision(btCollisionObject* body0, btCollisionObject* body1) {
+			// find the entities with their btCollisionObject data
+			entityx::Entity entity0 = m_entitiesPerCollisionObject[body0];
+			entityx::Entity entity1 = m_entitiesPerCollisionObject[body1];
+			assert(entity0.valid() && entity1.valid());
+			if (isEntityCarried(entity0, entity1) || isEntityCarried(entity1, entity0)) {
+				std::cout << "lkjlkj" << std::endl;
+				return false;
+			}
+			std::cout << "lzz" << std::endl;
+			return btCollisionDispatcher::needsCollision(body0, body1);
+		}
+
+	private:
+		map<btCollisionObject*, entityx::Entity>& m_entitiesPerCollisionObject;
+	};
+
 	World() {
 		/// Definitions of the dynamic world
 		// Discrete dynamic world instanciation
 		m_collision_configuration = new btDefaultCollisionConfiguration();
-		m_dispatcher = new btCollisionDispatcher(m_collision_configuration);
+		m_dispatcher = new GameCollisionDispatcher(m_collision_configuration, m_entitiesPerCollisionObject);
 		m_overlapping_pair_cache = new btDbvtBroadphase();
 		m_solver = new btSequentialImpulseConstraintSolver();
 
@@ -40,19 +76,19 @@ public:
 	}
 
 	void free() {
-		for (std::map<std::string, entityx::Entity>::iterator it = m_entities.begin(); it != m_entities.end(); it++) {
+		for (std::map<std::string, entityx::Entity>::iterator it = m_entitiesPerName.begin(); it != m_entitiesPerName.end(); it++) {
 			entityx::Entity entity = it->second;
 			removeFromWorld(entity);
 			entity.destroy();
 		}
-		m_entities.clear();
+		m_entitiesPerName.clear();
 	}
 
 	// Add an entity including a Physics component to the dynamic world
 	// Precondition : the entity has a Physics component
 	void addEntity(const std::string& name, entityx::Entity entity) {
 		assert(entity.valid());
-		if (m_entities.find(name) != m_entities.end()) {
+		if (m_entitiesPerName.find(name) != m_entitiesPerName.end()) {
 			deleteEntity(name);
 		}
 
@@ -60,31 +96,30 @@ public:
 		if (physic == NULL)
 			return;
 		dynamic_world->addRigidBody(physic->rigid_body);
-		
-		// Add entity constraints to the world
-		/*for (std::map<std::string, PhysicConstraint*>::iterator it = physic->constraints.begin(); it != physic->constraints.end(); ++it) {
-			dynamic_world->addConstraint(it->second->getTypedConstraint());
-		}*/
 
-		m_entities[name] = entity;
+		m_entitiesPerName[name] = entity;
+		m_entitiesPerCollisionObject[physic->rigid_body] = entity;
 	}
 
 	// Delete an entity including a Physics component to the dynamic world
 	// Precondition : the entity has a Physics component
 	void deleteEntity(const std::string& name) {
-		if (m_entities.find(name) == m_entities.end())
+		if (m_entitiesPerName.find(name) == m_entitiesPerName.end())
 			return;
-		entityx::Entity entity = m_entities[name];
+		entityx::Entity entity = m_entitiesPerName[name];
+
+		Component<Physics> pPhysicEntityComponent = getComponent<Physics>(entity);
+		m_entitiesPerCollisionObject.erase(pPhysicEntityComponent->rigid_body);
 		removeFromWorld(entity);
 
-		m_entities[name].destroy();
-		m_entities.erase(name);
+		m_entitiesPerName[name].destroy();
+		m_entitiesPerName.erase(name);
 	}
 
 	entityx::Entity get(const std::string& name) {
-		assert(m_entities.find(name) != m_entities.end());
-		assert(m_entities[name].valid());
-		return m_entities[name];
+		assert(m_entitiesPerName.find(name) != m_entitiesPerName.end());
+		assert(m_entitiesPerName[name].valid());
+		return m_entitiesPerName[name];
 	}
 
 	bool isEntityPicked(const btVector3& btFrom, const btVector3& btTo, std::string& hit_entity, btVector3& I) const {
@@ -99,7 +134,7 @@ public:
 			I = res.m_hitPointWorld;
 
 			const btCollisionObject* obj_collided = res.m_collisionObject;
-			for (std::map<std::string, entityx::Entity>::const_iterator it = m_entities.cbegin(); it != m_entities.cend(); it++) {
+			for (std::map<std::string, entityx::Entity>::const_iterator it = m_entitiesPerName.cbegin(); it != m_entitiesPerName.cend(); it++) {
 				entityx::Entity entity = it->second;
 				const std::string& name = it->first;
 
@@ -148,5 +183,6 @@ private:
 	btBroadphaseInterface* m_overlapping_pair_cache;
 	btSequentialImpulseConstraintSolver* m_solver;
 
-	std::map<std::string, entityx::Entity> m_entities;
+	std::map<std::string, entityx::Entity> m_entitiesPerName;
+	std::map<btCollisionObject*, entityx::Entity> m_entitiesPerCollisionObject;
 };

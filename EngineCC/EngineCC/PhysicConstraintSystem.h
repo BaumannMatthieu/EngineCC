@@ -44,6 +44,18 @@ public:
 	}
 	~PhysicConstraintSystem() {
 		// Remove all the constraints from the world
+		for (map<Entity, map<string, PhysicConstraint*>>::iterator it = m_world_constraints.begin();
+			it != m_world_constraints.end(); ++it) {
+			map<string, PhysicConstraint*>& constraints = it->second;
+			for (map<string, PhysicConstraint*>::iterator it2 = constraints.begin(); it2 != constraints.end(); ++it2) {
+				const string& constraint_name = it2->first;
+				removeConstraint(constraints, constraint_name);
+				
+				if (constraints.empty()) {
+					break;
+				}
+			}
+		}
 	}
 
 	void configure(EventManager &event_manager) {
@@ -70,8 +82,14 @@ public:
 		pHingeConstraint->startImpulse(event.angle_offset, event.torque);
 	}
 
-	// Add a new constraint to the world
+	// Add a new constraint to the world. If the constraint already exist, we exit the procedure and do not replace it by the new one
+	// The user just need to change the constraint but do not have to replace it.
 	void addConstraint(map<string, PhysicConstraint*>& entity_constraints, const string& constraint_name, PhysicConstraint* pConstraint) {
+		// If the constraint already exists we exit
+		if (isConstraintExists(entity_constraints, constraint_name)) {
+			return;
+		}
+		
 		removeConstraint(entity_constraints, constraint_name);
 		entity_constraints.insert(std::pair<string, PhysicConstraint*>(constraint_name, pConstraint));
 

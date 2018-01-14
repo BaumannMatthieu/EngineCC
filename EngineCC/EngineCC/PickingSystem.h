@@ -4,11 +4,24 @@
 
 #include "InputHandler.h"
 #include "ScriptSystem.h"
+#include "EntityHierarchy.h"
+
+using namespace std;
 
 struct InteractionEvent {
-	entityx::Entity entity_emitting;
+	InteractionEvent(entityx::Entity willingInteractionEntity, entityx::Entity interactionWithEntity) :
+		willingInteractionEntity(willingInteractionEntity), interactionWithEntity(interactionWithEntity) {
+	}
+
+	entityx::Entity willingInteractionEntity;
+	entityx::Entity interactionWithEntity;
 };
 
+// The picking system's role is to manage if the interactionWithEntity is no too far from the
+// willingInteractionEntity (e.g. the player).
+// If it is the case, the Interaction script from the interactionWithEntity can be launched
+// If the interactionWithEntity is carryable and the willingInteractionEntity can handle objects
+// then the willingInteractionEntity can equip the interactionWithEntity
 class PickingSystem : public entityx::System<PickingSystem>, public entityx::Receiver<PickingSystem> {
 public:
 	PickingSystem(const Viewer& viewer, const InputHandler& input_handler, entityx::Entity player) : m_viewer(viewer), m_input_handler(input_handler), m_player(player) {
@@ -19,50 +32,99 @@ public:
 	}
 
 	void receive(const InteractionEvent &event) {
-		entityx::Entity entity;
-		// TODO : allow other handling entities than player to pick a carryable entity
-		if (isEntityPerInteraction(entity, m_input_handler, m_viewer)) {
-			std::weak_ptr<ScriptSystem> script_system = GameProgram::game->systems.system<ScriptSystem>();
-			entityx::EventManager& ev = GameProgram::game->events;
-			if (auto script_system_ptr = script_system.lock()) {
-				if (!script_system_ptr->isRunningScriptFrom(entity)) {
-					ev.emit<LaunchEvent>({ entity, Script::INTERACTION });
-					std::cout << "interaction" << std::endl;
-				}
-			}
+		entityx::Entity interactionWithEntity = event.interactionWithEntity;
+		entityx::Entity willingInteractionEntity = event.willingInteractionEntity;
 
-			if (entity.component<Carryable>()) {
-				const btTransform& local_transform = entity.component<Carryable>()->local_tr;
+		// Test if the two entities are not too far to interact with each other
+		if (!hasComponent<Physics>(interactionWithEntity) || !hasComponent<Physics>(willingInteractionEntity)) {
+			return;
+		}
 
-				World& world = Singleton<World>::getInstance();
-				entityx::ComponentHandle<Handler> player_handler = m_player.component<Handler>();
-				entityx::ComponentHandle<Physics> player_physics = m_player.component<Physics>();
+		Component<Physics> pPhysicsInteractionWithComponent = getComponent<Physics>(interactionWithEntity);
+		Component<Physics> pPhysicsWillInteractionComponent = getComponent<Physics>(willingInteractionEntity);
 
-				btCompoundShape* player_compound_shape = (btCompoundShape*)player_physics->collision_shape;
-				btRigidBody* player_body = player_physics->rigid_body;
-				if (player_handler->left_arm.valid()) {
-					entityx::ComponentHandle<Physics> picked_physics = player_handler->left_arm.component<Physics>();
+		const btVector3& posInteractionWithEntity = pPhysicsInteractionWithComponent->rigid_body->getCenterOfMassPosition();
+		const btVector3& posWillInteractionEntity = pPhysicsWillInteractionComponent->rigid_body->getCenterOfMassPosition();
+#define DISTANCE_MIN_INTERACTION 10.f
+		if ((posInteractionWithEntity - posWillInteractionEntity).norm() >= DISTANCE_MIN_INTERACTION) {
+			return;
+		}
 
-					player_compound_shape->removeChildShape(picked_physics->collision_shape);
-					player_physics->mass -= picked_physics->mass;
-
-					picked_physics->rigid_body->setWorldTransform(player_body->getWorldTransform() * local_transform);
-					world.dynamic_world->addRigidBody(picked_physics->rigid_body);
-				}
-				player_handler->left_arm = entity;
-
-				player_compound_shape->addChildShape(local_transform, entity.component<Physics>()->collision_shape);
-
-				player_physics->mass += entity.component<Physics>()->mass;
-				// Recomputation of the inertia of the player compound shape
-				btVector3 inertia;
-				player_compound_shape->calculateLocalInertia(player_physics->mass, inertia);
-				player_body->setMassProps(player_physics->mass, inertia);
-				player_body->updateInertiaTensor();
-				
-				world.dynamic_world->removeRigidBody(entity.component<Physics>()->rigid_body);
+		// The two entities are enough near.
+		// We launch the interaction script of the interactionWithEntity if no script is currently running
+		std::weak_ptr<ScriptSystem> scriptSystem = GameProgram::game->systems.system<ScriptSystem>();
+		entityx::EventManager& ev = GameProgram::game->events;
+		if (auto scriptSystemPtr = scriptSystem.lock()) {
+			if (!scriptSystemPtr->isRunningScriptFrom(interactionWithEntity)) {
+				ev.emit<LaunchEvent>({ interactionWithEntity, Script::INTERACTION });
+				std::cout << "Launching interaction script !" << std::endl;
 			}
 		}
+
+		if (hasComponent<Carryable>(interactionWithEntity) && hasComponent<Handler>(willingInteractionEntity)) {
+			Component<Handler> pHandlerWillInteractionComponent = getComponent<Handler>(willingInteractionEntity);
+
+			Component<Physics> pPhysicsWillInteractionComponent = getComponent<Physics>(willingInteractionEntity);
+			Component<Physics> pPhysicsInteractionWithComponent = getComponent<Physics>(interactionWithEntity);
+
+			EntityHierarchyManager& entityHierarchyManager = EntityHierarchyManager::getInstance();
+
+			if (pHandlerWillInteractionComponent->left_arm.valid() && pHandlerWillInteractionComponent->left_arm != interactionWithEntity) {
+				std::cout << "drop" << std::endl;
+				entityx::Entity droppedLeftArmEntity = pHandlerWillInteractionComponent->left_arm;
+				entityHierarchyManager.remove(willingInteractionEntity);
+
+				Component<Physics> pPhysicsDroppedEntityComponent = getComponent<Physics>(droppedLeftArmEntity);
+				pPhysicsWillInteractionComponent->rigid_body->setIgnoreCollisionCheck(pPhysicsDroppedEntityComponent->rigid_body, false);
+			}
+
+			pHandlerWillInteractionComponent->left_arm = interactionWithEntity;
+			
+			Component<Carryable> pCarryableInteractionWithComponent = getComponent<Carryable>(interactionWithEntity);
+			EntityHierarchyPtr handlerHierarchy = make_unique<EntityHierarchy>(willingInteractionEntity,
+				pPhysicsWillInteractionComponent->rigid_body->getWorldTransform());
+
+			EntityHierarchyPtr carriedEntityNode = make_unique<EntityHierarchy>(interactionWithEntity,
+				pCarryableInteractionWithComponent->local_tr);
+
+			handlerHierarchy->addChild(move(carriedEntityNode));
+			entityHierarchyManager.insertCopy(willingInteractionEntity, std::move(handlerHierarchy));
+
+			// Disable collision between the WillInteraction and InteractionWith rigid bodies
+			pPhysicsWillInteractionComponent->rigid_body->setIgnoreCollisionCheck(pPhysicsInteractionWithComponent->rigid_body, true);
+		}
+
+		/*if (interactionWithEntity.component<Carryable>()) {
+			const btTransform& local_transform = interactionWithEntity.component<Carryable>()->local_tr;
+
+			World& world = Singleton<World>::getInstance();
+			entityx::ComponentHandle<Handler> player_handler = m_player.component<Handler>();
+			entityx::ComponentHandle<Physics> player_physics = m_player.component<Physics>();
+
+			btCompoundShape* player_compound_shape = (btCompoundShape*)player_physics->collision_shape;
+			btRigidBody* player_body = player_physics->rigid_body;
+			if (player_handler->left_arm.valid()) {
+				entityx::ComponentHandle<Physics> picked_physics = player_handler->left_arm.component<Physics>();
+
+				player_compound_shape->removeChildShape(picked_physics->collision_shape);
+				player_physics->mass -= picked_physics->mass;
+
+				picked_physics->rigid_body->setWorldTransform(player_body->getWorldTransform() * local_transform);
+				world.dynamic_world->addRigidBody(picked_physics->rigid_body);
+			}
+			player_handler->left_arm = interactionWithEntity;
+
+			player_compound_shape->addChildShape(local_transform, interactionWithEntity.component<Physics>()->collision_shape);
+
+			player_physics->mass += interactionWithEntity.component<Physics>()->mass;
+			// Recomputation of the inertia of the player compound shape
+			btVector3 inertia;
+			player_compound_shape->calculateLocalInertia(player_physics->mass, inertia);
+			player_body->setMassProps(player_physics->mass, inertia);
+			player_body->updateInertiaTensor();
+
+			world.dynamic_world->removeRigidBody(interactionWithEntity.component<Physics>()->rigid_body);
+		}*/
 	}
 
 	void update(entityx::EntityManager &es, entityx::EventManager &events, entityx::TimeDelta dt) override {
@@ -75,14 +137,9 @@ public:
 		btVector3 intersection_point;
 		const std::string& name_entity = PickingSystem::getPickedEntity(input_handler, *GameProgram::m_current_viewer, hit, intersection_point);
 		if (hit) {
-			btVector3 player_pos(viewer.getPosition().x, viewer.getPosition().y, viewer.getPosition().z);
-			btScalar distance = (player_pos - intersection_point).norm();
-#define DISTANCE_MIN_INTERACTION 10.f
-			if (distance < DISTANCE_MIN_INTERACTION) {
-				World& world = Singleton<World>::getInstance();
-				entity = world.get(name_entity);
-				return true;
-			}
+			World& world = Singleton<World>::getInstance();
+			entity = world.get(name_entity);
+			return true;
 		}
 		return false;
 	}
@@ -137,6 +194,7 @@ public:
 	}
 
 private:
+
 	entityx::Entity m_player;
 	const Viewer& m_viewer;
 	const InputHandler& m_input_handler;

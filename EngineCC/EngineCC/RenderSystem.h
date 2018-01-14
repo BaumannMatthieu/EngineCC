@@ -4,8 +4,6 @@
 #include "Components.h"
 #include "Viewer.h"
 
-
-
 /// RenderSystem definifion
 class RenderSystem : public entityx::System<RenderSystem> {
 public:
@@ -27,7 +25,7 @@ public:
 		es.each<Physics, Render>([this](entityx::Entity entity, Physics& physic, Render& render) {
 			btCollisionShape* collision_shape = physic.collision_shape;
 			
-			if (collision_shape->getShapeType() == COMPOUND_SHAPE_PROXYTYPE) {
+			/*if (collision_shape->getShapeType() == COMPOUND_SHAPE_PROXYTYPE) {
 				// The collision is a compound of other collision shapes
 				btCompoundShape* compound_shape = (btCompoundShape*)collision_shape;
 				entityx::ComponentHandle<Handler> handler = entity.component<Handler>();
@@ -40,11 +38,11 @@ public:
 					(*render_left)->setLocalTransform(btTransformToLocalTransform(handler_tr * tr, collision_shape));
 				}
 			}
-			else {
+			else {*/
 				btTransform tr;
 				physic.motion_state->getWorldTransform(tr);
 				render->setLocalTransform(btTransformToLocalTransform(tr, collision_shape));
-			}
+			//}
 		});
 
 		es.each<Render>([this](entityx::Entity entity, Render& render) {
